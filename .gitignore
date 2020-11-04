@@ -1,0 +1,21 @@
+# general things to ignore
+build/
+dist/
+*.egg-info/
+*.egg
+*.py[cod]
+*__pycache__/*
+*.so
+*~
+*.idea
+.pytest_cache/
+# modules/hydro/__pycache__/
+
+# due to using tox and pytest
+.tox
+.cache
+
+# Docker parameters
+# param*.yml
+/.project
+/.pydevproject
