@@ -14,7 +14,6 @@ import xarray as xr
 # from pymongo.errors import BulkWriteError
 import pandas as pd
 import orjson
-import yaml
 from time import sleep
 from datetime import datetime
 import copy
@@ -33,17 +32,16 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-base_dir = os.path.realpath(os.path.dirname(__file__))
-
-with open(os.path.join(base_dir, 'parameters.yml')) as param:
-    param = yaml.safe_load(param)
-
-
-remotes_list = param['remotes']
+# import yaml
+# base_dir = os.path.realpath(os.path.dirname(__file__))
+#
+# with open(os.path.join(base_dir, 'parameters.yml')) as param:
+#     param = yaml.safe_load(param)
+#
+#
+# remotes_list = param['remotes']
 
 dataset_key = key_patterns['dataset']
-
-remote = remotes_list[0]
 
 ##############################################
 ### Class
@@ -60,6 +58,7 @@ class Tethys(object):
         """
         setattr(self, 'datasets', [])
         setattr(self, '_datasets_sites', {})
+        setattr(self, '_dataset_key', dataset_key)
 
         if isinstance(remotes_list, list):
             datasets = self.get_remotes_list(remotes_list)
@@ -68,12 +67,11 @@ class Tethys(object):
             pass
 
 
-    def get_remotes_list(self, remotes_list):
+    def get_remotes_list(self, remotes_list, threads=20):
         """
 
         """
-        for dsl in remotes_list:
-            ds_dict = self.get_dataset_list(dsl)
+        output = ThreadPool(threads).map(self.get_dataset_list, remotes_list)
 
         return self.datasets
 
@@ -85,7 +83,7 @@ class Tethys(object):
         s3 = s3_connection(remote['connection_config'])
 
         try:
-            ds_resp = s3.get_object(Key=dataset_key, Bucket=remote['bucket'])
+            ds_resp = s3.get_object(Key=self._dataset_key, Bucket=remote['bucket'])
 
             ds_obj = ds_resp.pop('Body')
             ds_list = orjson.loads(ds_obj.read())
@@ -97,8 +95,6 @@ class Tethys(object):
             ds_dict = {d['dataset_id']: {'dataset': d, 'remote': remote} for d in ds_list}
 
             self._datasets_sites.update(ds_dict)
-
-            return ds_dict
 
         except:
             print('No datasets.json file in S3 bucket')
@@ -262,81 +258,22 @@ class Tethys(object):
 ######################################
 ### Testing
 
-dataset_id = 'cbba7575fb51024f4bf961e2'
-site_id = 'b7c99b99c209c70a946472fd'
-site_ids = ['b7c99b99c209c70a946472fd', '76cf3a75b64396ed21af3cb5']
-
-dataset_id = '9e1a03dc379cbf7037b0873d'
-site_id = '5c3848a5b9acee6694714e7e'
-
-
-self = Tethys(remotes_list)
-
-site_list1 = self.get_sites_list(dataset_id)
-
-data1 = self.get_time_series_results(dataset_id, site_id, output='Dataset')
-data1 = self.get_time_series_results(dataset_id, site_id, from_date='2012-01-02 00:00', output='Dataset')
+# remote = remotes_list[0]
+#
+# dataset_id = 'cbba7575fb51024f4bf961e2'
+# site_id = 'b7c99b99c209c70a946472fd'
+# site_ids = ['b7c99b99c209c70a946472fd', '76cf3a75b64396ed21af3cb5']
+#
+# dataset_id = '9e1a03dc379cbf7037b0873d'
+# site_id = '5c3848a5b9acee6694714e7e'
+#
+# self = Tethys()
+# self = Tethys(remotes_list)
+#
+# site_list1 = self.get_sites_list(dataset_id)
+#
+# data1 = self.get_time_series_results(dataset_id, site_id, output='Dataset')
+# data1 = self.get_time_series_results(dataset_id, site_id, output='Dict')
+# data1 = self.get_time_series_results(dataset_id, site_id, from_date='2012-01-02 00:00', output='Dataset')
 
 # data2 = self.bulk_time_series_results(dataset_id, site_ids, output='DataArray')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
