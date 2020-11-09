@@ -33,15 +33,13 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-# base_dir = os.path.realpath(os.path.dirname(__file__))
-#
-# with open(os.path.join(base_dir, 'parameters.yml')) as param:
-#     param = yaml.safe_load(param)
-#
-#
-# remotes_list = param['remotes']
+base_dir = os.path.realpath(os.path.dirname(__file__))
 
-dataset_key = key_patterns['dataset']
+with open(os.path.join(base_dir, 'parameters.yml')) as param:
+    param = yaml.safe_load(param)
+
+
+remotes_list = param['remotes']
 
 ##############################################
 ### Class
@@ -59,33 +57,33 @@ class Tethys(object):
         setattr(self, 'datasets', [])
         setattr(self, '_datasets', {})
         setattr(self, '_remotes', {})
-        setattr(self, '_sites', {})
-        setattr(self, '_dataset_key', dataset_key)
+        setattr(self, '_stations', {})
+        setattr(self, '_key_patterns', key_patterns)
 
         if isinstance(remotes_list, list):
-            datasets = self.get_remotes_list(remotes_list)
+            datasets = self.get_remotes(remotes_list)
 
         else:
             pass
 
 
-    def get_remotes_list(self, remotes_list, threads=20):
+    def get_remotes(self, remotes_list, threads=20):
         """
 
         """
-        output = ThreadPool(threads).map(self.get_dataset_list, remotes_list)
+        output = ThreadPool(threads).map(self.get_datasets, remotes_list)
 
         return self.datasets
 
 
-    def get_dataset_list(self, remote):
+    def get_datasets(self, remote):
         """
 
         """
         s3 = s3_connection(remote['connection_config'])
 
         try:
-            ds_resp = s3.get_object(Key=self._dataset_key, Bucket=remote['bucket'])
+            ds_resp = s3.get_object(Key=self._key_patterns['dataset'], Bucket=remote['bucket'])
 
             ds_obj = ds_resp.pop('Body')
             ds_list = orjson.loads(ds_obj.read())
@@ -104,7 +102,7 @@ class Tethys(object):
             print('No datasets.json file in S3 bucket')
 
 
-    def get_sites_list(self, dataset_id):
+    def get_stations(self, dataset_id):
         """
 
         """
@@ -115,34 +113,34 @@ class Tethys(object):
 
         s3 = s3_connection(remote['connection_config'])
 
-        site_key = key_patterns['site'].format(dataset_id=dataset_id)
+        site_key = self._key_patterns['station'].format(dataset_id=dataset_id)
 
         try:
-            site_resp = s3.get_object(Key=site_key, Bucket=remote['bucket'])
+            stn_resp = s3.get_object(Key=site_key, Bucket=remote['bucket'])
 
-            site_obj = site_resp.pop('Body')
-            site_list = orjson.loads(read_pkl_zstd(site_obj.read(), False))
+            stn_obj = stn_resp.pop('Body')
+            stn_list = orjson.loads(read_pkl_zstd(stn_obj.read(), False))
 
-            self._sites.update({dataset_id: {s['site_id']: s for s in site_list}})
+            self._stations.update({dataset_id: {s['station_id']: s for s in stn_list}})
 
             ## Create spatial index here
 
-            return site_list
+            return stn_list
 
         except:
-            print('No sites.json.zst file in S3 bucket')
+            print('No stations.json.zst file in S3 bucket')
 
 
-    def get_time_series_results(self, dataset_id, site_id, from_date=None, to_date=None, quality_codes=False, output='DataArray'):
+    def get_time_series_results(self, dataset_id, station_id, from_date=None, to_date=None, quality_codes=False, output='DataArray'):
         """
-        Function to query the time series data given a specific dataset_id and site_id. Multiple optional outputs.
+        Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
 
         Parameters
         ----------
         dataset_id : str
             The hashed str of the dataset_id.
-        site_id : str
-            The hashed string of the site_id.
+        station_id : str
+            The hashed string of the station_id.
         from_date : str, Timestamp, datetime, or None
             The start date of the selection.
         to_date : str, Timestamp, datetime, or None
@@ -160,11 +158,11 @@ class Tethys(object):
         -------
         Whatever the output was set to.
         """
-        dataset_site = self._sites[dataset_id][site_id]
+        dataset_stn = self._stations[dataset_id][station_id]
         parameter = self._datasets[dataset_id]['parameter']
         remote = self._remotes[dataset_id]
 
-        obj_info = dataset_site['time_series_object_info']
+        obj_info = dataset_stn['time_series_object_key']
         ts_key = obj_info['key']
         bucket = obj_info['bucket']
 
@@ -214,7 +212,7 @@ class Tethys(object):
                 raise ValueError("output must be one of 'Dataset', 'DataArray', 'Dict', or 'json'")
 
         except:
-            print('No time series data for dataset_id/site_id combo')
+            print('No time series data for dataset_id/station_id combo')
 
 
     # def bulk_time_series_results(self, dataset_id, site_ids, from_date=None, to_date=None, quality_codes=False, output='DataArray'):
@@ -263,8 +261,8 @@ class Tethys(object):
 
 # remote = remotes_list[0]
 #
-# dataset_id = 'cbba7575fb51024f4bf961e2'
-# site_id = 'b7c99b99c209c70a946472fd'
+# dataset_id = '25e95034d695ac1f9bbfd7d6'
+# station_id = '440c5ec714d1c338db0c667b'
 # site_ids = ['b7c99b99c209c70a946472fd', '76cf3a75b64396ed21af3cb5']
 #
 # dataset_id = '9e1a03dc379cbf7037b0873d'
@@ -273,11 +271,11 @@ class Tethys(object):
 # self = Tethys()
 # self = Tethys(remotes_list)
 #
-# site_list1 = self.get_sites_list(dataset_id)
+# stn_list1 = self.get_stations(dataset_id)
 #
-# data1 = self.get_time_series_results(dataset_id, site_id, output='Dataset')
-# data1 = self.get_time_series_results(dataset_id, site_id, output='Dict')
-# data1 = self.get_time_series_results(dataset_id, site_id, from_date='2012-01-02 00:00', output='Dataset')
+# data1 = self.get_time_series_results(dataset_id, station_id, output='Dataset')
+# data1 = self.get_time_series_results(dataset_id, station_id, output='Dict')
+# data1 = self.get_time_series_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
 
 # data2 = self.bulk_time_series_results(dataset_id, site_ids, output='DataArray')
 
