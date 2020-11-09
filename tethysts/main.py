@@ -14,6 +14,7 @@ import xarray as xr
 # from pymongo.errors import BulkWriteError
 import pandas as pd
 import orjson
+# import yaml
 from time import sleep
 from datetime import datetime
 import copy
@@ -32,7 +33,6 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-# import yaml
 # base_dir = os.path.realpath(os.path.dirname(__file__))
 #
 # with open(os.path.join(base_dir, 'parameters.yml')) as param:
@@ -40,8 +40,6 @@ pd.options.display.max_columns = 10
 #
 #
 # remotes_list = param['remotes']
-
-dataset_key = key_patterns['dataset']
 
 ##############################################
 ### Class
@@ -57,73 +55,77 @@ class Tethys(object):
 
         """
         setattr(self, 'datasets', [])
-        setattr(self, '_datasets_stations', {})
-        setattr(self, '_dataset_key', dataset_key)
+        setattr(self, '_datasets', {})
+        setattr(self, '_remotes', {})
+        setattr(self, '_stations', {})
+        setattr(self, '_key_patterns', key_patterns)
 
         if isinstance(remotes_list, list):
-            datasets = self.get_remotes_list(remotes_list)
+            datasets = self.get_remotes(remotes_list)
 
         else:
             pass
 
 
-    def get_remotes_list(self, remotes_list, threads=20):
+    def get_remotes(self, remotes_list, threads=20):
         """
 
         """
-        output = ThreadPool(threads).map(self.get_dataset_list, remotes_list)
+        output = ThreadPool(threads).map(self.get_datasets, remotes_list)
 
         return self.datasets
 
 
-    def get_dataset_list(self, remote):
+    def get_datasets(self, remote):
         """
 
         """
         s3 = s3_connection(remote['connection_config'])
 
         try:
-            ds_resp = s3.get_object(Key=self._dataset_key, Bucket=remote['bucket'])
+            ds_resp = s3.get_object(Key=self._key_patterns['dataset'], Bucket=remote['bucket'])
 
             ds_obj = ds_resp.pop('Body')
             ds_list = orjson.loads(ds_obj.read())
 
             ds_list2 = copy.deepcopy(ds_list)
             [l.pop('properties') for l in ds_list2]
-            self.datasets.append(ds_list2)
+            self.datasets.extend(ds_list2)
 
-            ds_dict = {d['dataset_id']: {'dataset': d, 'remote': remote} for d in ds_list}
+            ds_dict = {d['dataset_id']: d for d in ds_list}
+            remote_dict = {d: {'dataset_id': d, 'bucket': remote['bucket'], 'connection_config': remote['connection_config']} for d in ds_dict}
 
-            self._datasets_stations.update(ds_dict)
+            self._datasets.update(ds_dict)
+            self._remotes.update(remote_dict)
 
         except:
             print('No datasets.json file in S3 bucket')
 
 
-    def get_stations_list(self, dataset_id):
+    def get_stations(self, dataset_id):
         """
 
         """
-        # dataset = self._datasets_stations[dataset_id]
-        # if not hasattr(self, '_datasets_stations'):
+        # dataset = self._datasets_sites[dataset_id]
+        # if not hasattr(self, '_datasets_sites'):
 
-        remote = self._datasets_stations[dataset_id]['remote']
+        remote = self._remotes[dataset_id]
 
         s3 = s3_connection(remote['connection_config'])
 
-        station_key = key_patterns['station'].format(dataset_id=dataset_id)
+        site_key = self._key_patterns['station'].format(dataset_id=dataset_id)
 
         try:
-            station_resp = s3.get_object(Key=station_key, Bucket=remote['bucket'])
+            stn_resp = s3.get_object(Key=site_key, Bucket=remote['bucket'])
 
-            station_obj = station_resp.pop('Body')
-            station_list = orjson.loads(read_pkl_zstd(station_obj.read(), False))
+            stn_obj = stn_resp.pop('Body')
+            stn_list = orjson.loads(read_pkl_zstd(stn_obj.read(), False))
 
-            self._datasets_stations[dataset_id].update({'stations': {s['station_id']: s for s in station_list}})
+            self._stations.update({dataset_id: {s['station_id']: s for s in stn_list}})
 
             ## Create spatial index here
 
-            return station_list
+            return stn_list
 
         except:
             print('No stations.json.zst file in S3 bucket')
@@ -156,16 +158,15 @@ class Tethys(object):
         -------
         Whatever the output was set to.
         """
-        dataset_dict = self._datasets_stations[dataset_id]
-        dataset_station = dataset_dict['stations'][station_id]
-        dataset = dataset_dict['dataset']
-        parameter = dataset['parameter']
+        dataset_stn = self._stations[dataset_id][station_id]
+        parameter = self._datasets[dataset_id]['parameter']
+        remote = self._remotes[dataset_id]
 
-        obj_info = dataset_station['time_series_object_info']
+        obj_info = dataset_stn['time_series_object_key']
         ts_key = obj_info['key']
         bucket = obj_info['bucket']
 
-        s3 = s3_connection(dataset_dict['remote']['connection_config'])
+        s3 = s3_connection(remote['connection_config'])
 
         try:
             ts_resp = s3.get_object(Key=ts_key, Bucket=bucket)
@@ -214,16 +215,16 @@ class Tethys(object):
             print('No time series data for dataset_id/station_id combo')
 
 
-    # def bulk_time_series_results(self, dataset_id, station_ids, from_date=None, to_date=None, quality_codes=False, output='DataArray'):
+    # def bulk_time_series_results(self, dataset_id, site_ids, from_date=None, to_date=None, quality_codes=False, output='DataArray'):
     #     """
-    #     Function to bulk query the time series data given a specific dataset_id and a list of station_ids. Multiple optional outputs.
+    #     Function to bulk query the time series data given a specific dataset_id and a list of site_ids. Multiple optional outputs.
     #
     #     Parameters
     #     ----------
     #     dataset_id : str
     #         The hashed str of the dataset_id.
-    #     station_ids : list of str
-    #         A list of hashed strings of the station_ids.
+    #     site_ids : list of str
+    #         A list of hashed strings of the site_ids.
     #     from_date : str, Timestamp, datetime, or None
     #         The start date of the selection.
     #     to_date : str, Timestamp, datetime, or None
@@ -241,7 +242,7 @@ class Tethys(object):
     #     -------
     #     Whatever the output was set to.
     #     """
-    #     lister = [(dataset_id, s, from_date, to_date, quality_codes, 'Dataset') for s in station_ids]
+    #     lister = [(dataset_id, s, from_date, to_date, quality_codes, 'Dataset') for s in site_ids]
     #
     #     output = ThreadPool(4).starmap(self.get_time_series_results, lister)
     #
@@ -260,20 +261,20 @@ class Tethys(object):
 
 # remote = remotes_list[0]
 #
-# dataset_id = 'cbba7575fb51024f4bf961e2'
-# station_id = 'b7c99b99c209c70a946472fd'
-# station_ids = ['b7c99b99c209c70a946472fd', '76cf3a75b64396ed21af3cb5']
+# dataset_id = '25e95034d695ac1f9bbfd7d6'
+# station_id = '440c5ec714d1c338db0c667b'
+# site_ids = ['b7c99b99c209c70a946472fd', '76cf3a75b64396ed21af3cb5']
 #
 # dataset_id = '9e1a03dc379cbf7037b0873d'
-# station_id = '5c3848a5b9acee6694714e7e'
+# site_id = '5c3848a5b9acee6694714e7e'
 #
 # self = Tethys()
 # self = Tethys(remotes_list)
 #
-# station_list1 = self.get_stations_list(dataset_id)
+# stn_list1 = self.get_stations(dataset_id)
 #
 # data1 = self.get_time_series_results(dataset_id, station_id, output='Dataset')
 # data1 = self.get_time_series_results(dataset_id, station_id, output='Dict')
 # data1 = self.get_time_series_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
 
-# data2 = self.bulk_time_series_results(dataset_id, station_ids, output='DataArray')
+# data2 = self.bulk_time_series_results(dataset_id, site_ids, output='DataArray')
