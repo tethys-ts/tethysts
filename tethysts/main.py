@@ -7,11 +7,7 @@ import sys
 import os
 import io
 import numpy as np
-# base_dir = os.path.realpath(os.path.dirname(__file__))
-# sys.path.append(base_dir)
 import xarray as xr
-# from pymongo import MongoClient, InsertOne, DeleteOne, ReplaceOne, UpdateOne
-# from pymongo.errors import BulkWriteError
 import pandas as pd
 import orjson
 # import yaml
@@ -23,9 +19,7 @@ import botocore
 from multiprocessing.pool import ThreadPool
 import concurrent.futures
 import shapely
-# from bson.objectid import ObjectId
 from tethys_utils import read_pkl_zstd, list_parse_s3, get_last_date, key_patterns, s3_connection, write_pkl_zstd
-# from utils import get_remote_datasets, get_dataset_params
 
 pd.options.display.max_columns = 10
 
@@ -33,11 +27,10 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-# base_dir = os.path.realpath(os.path.dirname(__file__))
+# base_dir = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
 #
 # with open(os.path.join(base_dir, 'parameters.yml')) as param:
 #     param = yaml.safe_load(param)
-#
 #
 # remotes_list = param['remotes']
 
@@ -131,7 +124,7 @@ class Tethys(object):
             print('No stations.json.zst file in S3 bucket')
 
 
-    def get_time_series_results(self, dataset_id, station_id, from_date=None, to_date=None, quality_codes=False, output='DataArray'):
+    def get_time_series_results(self, dataset_id, station_id, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_codes=False, output='DataArray'):
         """
         Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
 
@@ -145,6 +138,12 @@ class Tethys(object):
             The start date of the selection.
         to_date : str, Timestamp, datetime, or None
             The end date of the selection.
+        from_mod_date : str, Timestamp, datetime, or None
+            Only return data post the defined modified date.
+        to_mod_date : str, Timestamp, datetime, or None
+            Only return data prior to the defined modified date.
+        modified_date : bool
+            Should the modified dates be returned if they exist?
         quality_codes : bool
             Should the quality codes be returned if they exist?
         output : str
@@ -173,6 +172,7 @@ class Tethys(object):
             ts_obj = ts_resp.pop('Body')
             ts_xr = xr.open_dataset(read_pkl_zstd(ts_obj.read(), False))
 
+            ## Filters
             if isinstance(from_date, (str, pd.Timestamp, datetime)):
                 from_date1 = pd.Timestamp(from_date)
             else:
@@ -182,27 +182,54 @@ class Tethys(object):
             else:
                 to_date1 = None
 
+            if isinstance(from_mod_date, (str, pd.Timestamp, datetime)):
+                from_mod_date1 = pd.Timestamp(from_mod_date)
+            else:
+                from_mod_date1 = None
+            if isinstance(to_mod_date, (str, pd.Timestamp, datetime)):
+                to_mod_date1 = pd.Timestamp(to_mod_date)
+            else:
+                to_mod_date1 = None
+
             if (to_date1 is not None) or (from_date1 is not None):
                 ts_xr1 = ts_xr.sel(time=slice(from_date1, to_date1))
             else:
                 ts_xr1 = ts_xr
+
+            if (to_mod_date1 is not None) or (from_mod_date1 is not None):
+                if 'modified_date' in ts_xr1:
+                    ts_xr1 = ts_xr1.sel(modified_date=slice(from_mod_date1, to_mod_date1))
+
+            ## Output
+            out_param = [parameter]
+
+            if quality_codes:
+                if 'quality_codes' in ts_xr1:
+                    out_param.extend(['quality_codes'])
+
+            if modified_date:
+                if 'modified_date' in ts_xr1:
+                    out_param.extend(['modified_date'])
+
+            if len(out_param) == 1:
+                out_param = out_param[0]
 
             ## Return
             if output == 'Dataset':
                 return ts_xr1.copy()
 
             elif output == 'DataArray':
-                return ts_xr1[parameter].copy()
+                return ts_xr1[out_param].copy()
 
             elif output == 'Dict':
-                darr = ts_xr1[parameter]
+                darr = ts_xr1[out_param]
                 data_dict = darr.to_dict()
                 data_dict.pop('name')
 
                 return data_dict
 
             elif output == 'json':
-                darr = ts_xr1[parameter]
+                darr = ts_xr1[out_param]
                 data_dict = darr.to_dict()
                 data_dict.pop('name')
                 json1 = orjson.dumps(data_dict)
@@ -274,6 +301,7 @@ class Tethys(object):
 # stn_list1 = self.get_stations(dataset_id)
 #
 # data1 = self.get_time_series_results(dataset_id, station_id, output='Dataset')
+# data1 = self.get_time_series_results(dataset_id, station_id, modified_date=True, quality_codes=True, output='DataArray')
 # data1 = self.get_time_series_results(dataset_id, station_id, output='Dict')
 # data1 = self.get_time_series_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
 
