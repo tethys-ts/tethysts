@@ -242,39 +242,40 @@ class Tethys(object):
             print('No time series data for dataset_id/station_id combo')
 
 
-    # def bulk_time_series_results(self, dataset_id, site_ids, from_date=None, to_date=None, quality_codes=False, output='DataArray'):
-    #     """
-    #     Function to bulk query the time series data given a specific dataset_id and a list of site_ids. Multiple optional outputs.
-    #
-    #     Parameters
-    #     ----------
-    #     dataset_id : str
-    #         The hashed str of the dataset_id.
-    #     site_ids : list of str
-    #         A list of hashed strings of the site_ids.
-    #     from_date : str, Timestamp, datetime, or None
-    #         The start date of the selection.
-    #     to_date : str, Timestamp, datetime, or None
-    #         The end date of the selection.
-    #     quality_codes : bool
-    #         Should the quality codes be returned if they exist?
-    #     output : str
-    #         Output format of the results. Options are:
-    #         Dataset - return the entire contents of the netcdf file as an xarray Dataset,
-    #         DataArray - return the requested dataset parameter as an xarray DataArray,
-    #         Dict - return a dictionary of results from the DataArray,
-    #         json - return a json str of the Dict.
-    #
-    #     Returns
-    #     -------
-    #     Whatever the output was set to.
-    #     """
-    #     lister = [(dataset_id, s, from_date, to_date, quality_codes, 'Dataset') for s in site_ids]
-    #
-    #     output = ThreadPool(4).starmap(self.get_time_series_results, lister)
-    #
-    #     ds1 = xr.concat(output, dim='time')
+    def bulk_time_series_results(self, dataset_id, station_ids, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_codes=False, output='DataArray', threads=10):
+        """
+        Function to bulk query the time series data given a specific dataset_id and a list of site_ids. Multiple optional outputs.
 
+        Parameters
+        ----------
+        dataset_id : str
+            The hashed str of the dataset_id.
+        site_ids : list of str
+            A list of hashed strings of the site_ids.
+        from_date : str, Timestamp, datetime, or None
+            The start date of the selection.
+        to_date : str, Timestamp, datetime, or None
+            The end date of the selection.
+        quality_codes : bool
+            Should the quality codes be returned if they exist?
+        output : str
+            Output format of the results. Options are:
+            Dataset - return the entire contents of the netcdf file as an xarray Dataset,
+            DataArray - return the requested dataset parameter as an xarray DataArray,
+            Dict - return a dictionary of results from the DataArray,
+            json - return a json str of the Dict.
+
+        Returns
+        -------
+        A dictionary of station_id key to a value of whatever the output was set to.
+        """
+        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_codes, output) for s in station_ids]
+
+        output = ThreadPool(threads).starmap(self.get_time_series_results, lister)
+
+        output2 = dict(zip(station_ids, output))
+
+        return output2
 
 
 
@@ -290,7 +291,7 @@ class Tethys(object):
 #
 # dataset_id = '25e95034d695ac1f9bbfd7d6'
 # station_id = '440c5ec714d1c338db0c667b'
-# site_ids = ['b7c99b99c209c70a946472fd', '76cf3a75b64396ed21af3cb5']
+# station_ids = ['440c5ec714d1c338db0c667b', 'effdd553968bf602aa9e166d']
 #
 # dataset_id = '9e1a03dc379cbf7037b0873d'
 # site_id = '5c3848a5b9acee6694714e7e'
@@ -305,4 +306,4 @@ class Tethys(object):
 # data1 = self.get_time_series_results(dataset_id, station_id, output='Dict')
 # data1 = self.get_time_series_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
 
-# data2 = self.bulk_time_series_results(dataset_id, site_ids, output='DataArray')
+# data2 = self.bulk_time_series_results(dataset_id, station_ids, output='DataArray')
