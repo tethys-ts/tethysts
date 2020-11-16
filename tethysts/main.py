@@ -27,12 +27,12 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-base_dir = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
-
-with open(os.path.join(base_dir, 'parameters.yml')) as param:
-    param = yaml.safe_load(param)
-
-remotes_list = param['remotes']
+# base_dir = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
+#
+# with open(os.path.join(base_dir, 'parameters.yml')) as param:
+#     param = yaml.safe_load(param)
+#
+# remotes_list = param['remotes']
 
 ##############################################
 ### Class
