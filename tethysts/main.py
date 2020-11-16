@@ -19,7 +19,7 @@ import botocore
 from multiprocessing.pool import ThreadPool
 import concurrent.futures
 import shapely
-from tethys_utils import read_pkl_zstd, list_parse_s3, get_last_date, key_patterns, s3_connection, write_pkl_zstd
+from tethys_utils import read_pkl_zstd, list_parse_s3, get_last_date, key_patterns, s3_connection, write_pkl_zstd, read_json_zstd
 
 pd.options.display.max_columns = 10
 
@@ -27,12 +27,12 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-# base_dir = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
-#
-# with open(os.path.join(base_dir, 'parameters.yml')) as param:
-#     param = yaml.safe_load(param)
-#
-# remotes_list = param['remotes']
+base_dir = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
+
+with open(os.path.join(base_dir, 'parameters.yml')) as param:
+    param = yaml.safe_load(param)
+
+remotes_list = param['remotes']
 
 ##############################################
 ### Class
@@ -76,13 +76,13 @@ class Tethys(object):
         s3 = s3_connection(remote['connection_config'])
 
         try:
-            ds_resp = s3.get_object(Key=self._key_patterns['dataset'], Bucket=remote['bucket'])
+            ds_resp = s3.get_object(Key=self._key_patterns['datasets'], Bucket=remote['bucket'])
 
             ds_obj = ds_resp.pop('Body')
-            ds_list = orjson.loads(ds_obj.read())
+            ds_list = read_json_zstd(ds_obj.read())
 
             ds_list2 = copy.deepcopy(ds_list)
-            [l.pop('properties') for l in ds_list2]
+            # [l.pop('properties') for l in ds_list2]
             self.datasets.extend(ds_list2)
 
             ds_dict = {d['dataset_id']: d for d in ds_list}
@@ -92,7 +92,7 @@ class Tethys(object):
             self._remotes.update(remote_dict)
 
         except:
-            print('No datasets.json file in S3 bucket')
+            print('No datasets.json.zst file in S3 bucket')
 
 
     def get_stations(self, dataset_id):
@@ -106,13 +106,13 @@ class Tethys(object):
 
         s3 = s3_connection(remote['connection_config'])
 
-        site_key = self._key_patterns['station'].format(dataset_id=dataset_id)
+        site_key = self._key_patterns['stations'].format(dataset_id=dataset_id)
 
         try:
             stn_resp = s3.get_object(Key=site_key, Bucket=remote['bucket'])
 
             stn_obj = stn_resp.pop('Body')
-            stn_list = orjson.loads(read_pkl_zstd(stn_obj.read(), False))
+            stn_list = read_json_zstd(stn_obj.read())
 
             self._stations.update({dataset_id: {s['station_id']: s for s in stn_list}})
 
@@ -289,9 +289,9 @@ class Tethys(object):
 
 # remote = remotes_list[0]
 #
-# dataset_id = '25e95034d695ac1f9bbfd7d6'
-# station_id = '440c5ec714d1c338db0c667b'
-# station_ids = ['440c5ec714d1c338db0c667b', 'effdd553968bf602aa9e166d']
+# dataset_id = 'f98dfaefbc15f045f900e4b9'
+# station_id = 'fff111e6e8e652b0804a21b4'
+# station_ids = [station_id, 'ffea187fa98bd1604b7755d5']
 #
 # dataset_id = '9e1a03dc379cbf7037b0873d'
 # site_id = '5c3848a5b9acee6694714e7e'
