@@ -296,7 +296,7 @@ class Tethys(object):
 # dataset_id = '9e1a03dc379cbf7037b0873d'
 # site_id = '5c3848a5b9acee6694714e7e'
 #
-# self = Tethys()
+# self = Tethys([remotes_list[0]])
 # self = Tethys(remotes_list)
 #
 # stn_list1 = self.get_stations(dataset_id)
@@ -307,3 +307,24 @@ class Tethys(object):
 # data1 = self.get_time_series_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
 
 # data2 = self.bulk_time_series_results(dataset_id, station_ids, output='DataArray')
+
+# dataset_id = 'f4cfb5a362707785dd39ff85'
+# station_id = 'ff4213c61878e098e07df513'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
