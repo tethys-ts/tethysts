@@ -113,6 +113,7 @@ class Tethys(object):
 
             stn_obj = stn_resp.pop('Body')
             stn_list = read_json_zstd(stn_obj.read())
+            stn_list = [s for s in stn_list if isinstance(s, dict)]
 
             self._stations.update({dataset_id: {s['station_id']: s for s in stn_list}})
 
@@ -124,7 +125,7 @@ class Tethys(object):
             print('No stations.json.zst file in S3 bucket')
 
 
-    def get_time_series_results(self, dataset_id, station_id, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_codes=False, output='DataArray'):
+    def get_time_series_results(self, dataset_id, station_id, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_codes=False, output='DataArray', max_connections=10):
         """
         Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
 
@@ -165,7 +166,7 @@ class Tethys(object):
         ts_key = obj_info['key']
         bucket = obj_info['bucket']
 
-        s3 = s3_connection(remote['connection_config'])
+        s3 = s3_connection(remote['connection_config'], max_pool_connections=max_connections)
 
         try:
             ts_resp = s3.get_object(Key=ts_key, Bucket=bucket)
@@ -269,7 +270,7 @@ class Tethys(object):
         -------
         A dictionary of station_id key to a value of whatever the output was set to.
         """
-        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_codes, output) for s in station_ids]
+        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_codes, output, threads) for s in station_ids]
 
         output = ThreadPool(threads).starmap(self.get_time_series_results, lister)
 
