@@ -17,7 +17,6 @@ import copy
 import boto3
 import botocore
 from multiprocessing.pool import ThreadPool
-import concurrent.futures
 import shapely
 from tethys_utils import read_pkl_zstd, list_parse_s3, get_last_date, key_patterns, s3_connection, write_pkl_zstd, read_json_zstd
 
