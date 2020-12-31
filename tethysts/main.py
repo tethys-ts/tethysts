@@ -146,7 +146,7 @@ class Tethys(object):
         parameter = dataset['parameter']
         remote = self._remotes[dataset_id]
 
-        run_dates = [ob['run_date'] for ob in dataset_stn['results_object_key']]
+        run_dates = [ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in dataset_stn['results_object_key']]
 
         return run_dates
 
