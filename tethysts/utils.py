@@ -74,7 +74,7 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
     return ts_xr1
 
 
-def process_results_output(ts_xr, modified_date=False, quality_code=False, output='DataArray'):
+def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray'):
     """
 
     """

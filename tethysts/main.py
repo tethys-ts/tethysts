@@ -42,6 +42,7 @@ class Tethys(object):
     """
 
     """
+
     ## Initial import and assignment function
     def __init__(self, remotes_list=None):
         """
@@ -117,7 +118,7 @@ class Tethys(object):
 
             self._stations.update({dataset_id: {s['station_id']: s for s in stn_list}})
 
-            ## Create spatial index here
+            ## Run spatial query here!
 
             return stn_list
 
@@ -224,16 +225,16 @@ class Tethys(object):
         remote = self._remotes[dataset_id]
 
         ## Get object key
-        obj_key = self.get_results_obj_key_s3(dataset_id, station_id, run_date)
+        obj_key = self._get_results_obj_key_s3(dataset_id, station_id, run_date)
 
         ## Get results
-        ts_xr = get_results_obj_s3(obj_key, remote['connection_config'], bucket, max_connections)
+        ts_xr = get_results_obj_s3(obj_key, remote['connection_config'], remote['bucket'], max_connections)
 
         ## Filters
         ts_xr1 = result_filters(ts_xr, from_date, to_date, from_mod_date, to_mod_date, remove_height)
 
         ## Output
-        output1 = process_results_output(ts_xr1, modified_date, quality_code, output)
+        output1 = process_results_output(ts_xr1, parameter, modified_date, quality_code, output)
 
         return output1
 
