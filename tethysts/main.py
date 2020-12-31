@@ -19,6 +19,7 @@ import botocore
 from multiprocessing.pool import ThreadPool
 import shapely
 from tethys_utils import read_pkl_zstd, list_parse_s3, get_last_date, key_patterns, s3_connection, write_pkl_zstd, read_json_zstd
+from tethysts.utils import get_results_obj_s3, result_filters, process_results_output
 
 pd.options.display.max_columns = 10
 
@@ -149,6 +150,36 @@ class Tethys(object):
         return run_dates
 
 
+    def _get_results_obj_key_s3(self, dataset_id, station_id, run_date):
+        """
+
+        """
+        dataset_stn = self._stations[dataset_id][station_id]
+
+        obj_keys = dataset_stn['results_object_key']
+        obj_keys_df = pd.DataFrame(obj_keys)
+        obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
+        last_key = obj_keys_df.iloc[obj_keys_df['run_date'].idxmax()]['key']
+
+        bucket = obj_keys[0]['bucket']
+
+        ## Set the correct run_date
+        if isinstance(run_date, (str, pd.Timestamp)):
+            run_date1 = pd.Timestamp(run_date)
+
+            obj_key_df = obj_keys_df[obj_keys_df['run_date'] == run_date1]
+
+            if obj_key_df.empty:
+                print('Requested run_date is not available, returning last run_date results')
+                obj_key = last_key
+            else:
+                obj_key = obj_key_df.iloc[0]['key']
+        else:
+            obj_key = last_key
+
+        return obj_key
+
+
     def get_results(self, dataset_id, station_id, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray', max_connections=10):
         """
         Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
@@ -186,114 +217,25 @@ class Tethys(object):
         -------
         Whatever the output was set to.
         """
+
         ## Get parameters
-        dataset_stn = self._stations[dataset_id][station_id]
         dataset = self._datasets[dataset_id]
         parameter = dataset['parameter']
         remote = self._remotes[dataset_id]
 
-        obj_keys = dataset_stn['results_object_key']
-        obj_keys_df = pd.DataFrame(obj_keys)
-        obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date'])
-        last_key = obj_keys_df.iloc[obj_keys_df['run_date'].idxmax()]['key']
-
-        bucket = obj_keys[0]['bucket']
-
-        ## Set the correct run_date
-        if isinstance(run_date, (str, pd.Timestamp)):
-            run_date1 = pd.Timestamp(run_date)
-            if run_date1.tzname() is None:
-                run_date2 = run_date1.tz_localize('utc')
-            else:
-                run_date2 = run_date1.tz_convert('utc')
-
-            obj_key_df = obj_keys_df[obj_keys_df['run_date'] == run_date2]
-
-            if obj_key_df.empty:
-                print('Requested run_date is not available, returning last run_date results')
-                obj_key = last_key
-            else:
-                obj_key = obj_key_df.iloc[0]['key']
-        else:
-            obj_key = last_key
+        ## Get object key
+        obj_key = self.get_results_obj_key_s3(dataset_id, station_id, run_date)
 
         ## Get results
-        s3 = s3_connection(remote['connection_config'], max_pool_connections=max_connections)
-
-        ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
-        ts_obj = ts_resp.pop('Body')
-        ts_xr = xr.open_dataset(read_pkl_zstd(ts_obj.read(), False))
+        ts_xr = get_results_obj_s3(obj_key, remote['connection_config'], bucket, max_connections)
 
         ## Filters
-        if isinstance(from_date, (str, pd.Timestamp, datetime)):
-            from_date1 = pd.Timestamp(from_date)
-        else:
-            from_date1 = None
-        if isinstance(to_date, (str, pd.Timestamp, datetime)):
-            to_date1 = pd.Timestamp(to_date)
-        else:
-            to_date1 = None
-
-        if isinstance(from_mod_date, (str, pd.Timestamp, datetime)):
-            from_mod_date1 = pd.Timestamp(from_mod_date)
-        else:
-            from_mod_date1 = None
-        if isinstance(to_mod_date, (str, pd.Timestamp, datetime)):
-            to_mod_date1 = pd.Timestamp(to_mod_date)
-        else:
-            to_mod_date1 = None
-
-        if (to_date1 is not None) or (from_date1 is not None):
-            ts_xr1 = ts_xr.sel(time=slice(from_date1, to_date1))
-        else:
-            ts_xr1 = ts_xr
-
-        if (to_mod_date1 is not None) or (from_mod_date1 is not None):
-            if 'modified_date' in ts_xr1:
-                ts_xr1 = ts_xr1.sel(modified_date=slice(from_mod_date1, to_mod_date1))
-
-        if remove_height:
-            ts_xr1 = ts_xr1.squeeze('height').drop('height')
+        ts_xr1 = result_filters(ts_xr, from_date, to_date, from_mod_date, to_mod_date, remove_height)
 
         ## Output
-        out_param = [parameter]
+        output1 = process_results_output(ts_xr1, modified_date, quality_code, output)
 
-        if quality_code:
-            if 'quality_code' in ts_xr1:
-                out_param.extend(['quality_code'])
-
-        if modified_date:
-            if 'modified_date' in ts_xr1:
-                out_param.extend(['modified_date'])
-
-        if len(out_param) == 1:
-            out_param = out_param[0]
-
-        ## Return
-        if output == 'Dataset':
-            return ts_xr1
-
-        elif output == 'DataArray':
-            return ts_xr1[out_param]
-
-        elif output == 'Dict':
-            darr = ts_xr1[out_param]
-            data_dict = darr.to_dict()
-            if 'name' in data_dict:
-                data_dict.pop('name')
-
-            return data_dict
-
-        elif output == 'json':
-            darr = ts_xr1[out_param]
-            data_dict = darr.to_dict()
-            if 'name' in data_dict:
-                data_dict.pop('name')
-            json1 = orjson.dumps(data_dict)
-
-            return json1
-        else:
-            raise ValueError("output must be one of 'Dataset', 'DataArray', 'Dict', or 'json'")
+        return output1
 
 
     def get_bulk_results(self, dataset_id, station_ids, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray', threads=10):
