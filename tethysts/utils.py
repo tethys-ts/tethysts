@@ -24,7 +24,7 @@ pd.options.display.max_columns = 10
 ### Helper functions
 
 
-def get_results_obj_s3(obj_key, connection_config, bucket, max_connections):
+def get_results_obj_s3(obj_key, connection_config, bucket, max_connections, return_xr=True):
     """
 
     """
@@ -32,9 +32,13 @@ def get_results_obj_s3(obj_key, connection_config, bucket, max_connections):
 
     ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
     ts_obj = ts_resp.pop('Body')
-    ts_xr = xr.open_dataset(read_pkl_zstd(ts_obj.read(), False))
 
-    return ts_xr
+    if return_xr:
+        ts_xr = xr.open_dataset(read_pkl_zstd(ts_obj.read(), False))
+
+        return ts_xr
+    else:
+        return ts_obj.read()
 
 
 def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, remove_height=False):
