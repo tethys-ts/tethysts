@@ -40,7 +40,17 @@ pd.options.display.max_columns = 10
 
 class Tethys(object):
     """
+    The base Tethys object.
 
+    Parameters
+    ----------
+    remotes_list : list of dict
+        list of dict of the S3 remotes to access. The dicts must contain:
+        bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+
+    Returns
+    -------
+    tethys object
     """
 
     ## Initial import and assignment function
@@ -63,7 +73,20 @@ class Tethys(object):
 
     def get_remotes(self, remotes_list, threads=20):
         """
+        The function to get many datasets from many remotes.
 
+        Parameters
+        ----------
+        remotes_list : list of dict
+            list of dict of the S3 remotes to access. The dicts must contain:
+            bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+        threads : int
+            The number of threads to use. I.E. the number of simultaneous remote reads.
+
+        Returns
+        -------
+        dict
+            of datasets
         """
         output = ThreadPool(threads).map(self.get_datasets, remotes_list)
 
@@ -72,7 +95,17 @@ class Tethys(object):
 
     def get_datasets(self, remote):
         """
+        Get datasets from an individual remote. Saves result into the object.
 
+        Parameters
+        ----------
+        remote : dict
+            dict of the S3 remote to access. The dict must contain:
+            bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+
+        Returns
+        -------
+        None
         """
         s3 = s3_connection(remote['connection_config'])
 
@@ -98,7 +131,17 @@ class Tethys(object):
 
     def get_stations(self, dataset_id):
         """
+        Method to return the stations associated with a dataset.
 
+        Parameters
+        ----------
+        dataset_id : str
+            The dataset_id of the dataset.
+
+        Returns
+        -------
+        list of dict
+            of station data
         """
         # dataset = self._datasets_sites[dataset_id]
         # if not hasattr(self, '_datasets_sites'):
@@ -133,9 +176,9 @@ class Tethys(object):
         Parameters
         ----------
         dataset_id : str
-            The hashed str of the dataset_id.
+            The dataset_id of the dataset.
         station_id : str
-            The hashed str of the station_id.
+            The station_id of the associated station.
 
         Returns
         -------
@@ -188,9 +231,9 @@ class Tethys(object):
         Parameters
         ----------
         dataset_id : str
-            The hashed str of the dataset_id.
+            The dataset_id of the dataset.
         station_id : str
-            The hashed str of the station_id.
+            The station_id of the associated station.
         from_date : str, Timestamp, datetime, or None
             The start date of the selection.
         to_date : str, Timestamp, datetime, or None
@@ -312,21 +355,3 @@ class Tethys(object):
 
 # dataset_id = 'f4cfb5a362707785dd39ff85'
 # station_id = 'ff4213c61878e098e07df513'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
