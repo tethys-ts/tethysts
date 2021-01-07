@@ -1,6 +1,6 @@
 {% set name = "tethysts" %}
-{% set version = "0.0.18" %}
-{% set sha256 = "181dc4fe18507f9e9d02a48d7981b4930bc40c7e4c262e2fb637270944188dbf" %}
+{% set version = "0.0.19" %}
+{% set sha256 = "8f4292ad92414c15c6b54e0b7a3097fa0ed368a9bf248465b7999e456deb2c09" %}
 
 # sha256 is the prefered checksum -- you can get it for a file with:
 #  `openssl sha256 <file name>`.
@@ -36,8 +36,12 @@ requirements:
     - setuptools
   run:
     - python
-    - shapely
-    - tethys-utils
+    - zstandard
+    - pandas
+    - xarray
+    - scipy
+    - boto3
+    - orjson
 
 test:
   imports:

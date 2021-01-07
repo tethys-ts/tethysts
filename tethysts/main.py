@@ -14,12 +14,9 @@ import orjson
 from time import sleep
 from datetime import datetime
 import copy
-import boto3
-import botocore
 from multiprocessing.pool import ThreadPool
-import shapely
-from tethys_utils import read_pkl_zstd, list_parse_s3, get_last_date, key_patterns, s3_connection, write_pkl_zstd, read_json_zstd
-from tethysts.utils import get_results_obj_s3, result_filters, process_results_output
+# import shapely
+from tethysts.utils import get_results_obj_s3, result_filters, process_results_output, s3_connection, read_json_zstd, key_patterns
 
 pd.options.display.max_columns = 10
 

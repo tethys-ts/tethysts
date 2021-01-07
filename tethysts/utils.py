@@ -11,17 +11,112 @@ import pandas as pd
 import orjson
 from time import sleep
 from datetime import datetime
+import zstandard as zstd
+import pickle
 import copy
 import boto3
 import botocore
 from multiprocessing.pool import ThreadPool
 import shapely
-from tethys_utils import read_pkl_zstd, list_parse_s3, get_last_date, key_patterns, s3_connection, write_pkl_zstd, read_json_zstd
 
 pd.options.display.max_columns = 10
 
+
+##############################################
+### Reference objects
+
+key_patterns = {'results': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/results.nc.zst',
+                'datasets': 'tethys/v2/datasets.json.zst',
+                'stations': 'tethys/v2/{dataset_id}/stations.json.zst',
+                'station': 'tethys/v2/{dataset_id}/{station_id}/station.json.zst',
+                'dataset': 'tethys/v2/{dataset_id}/dataset.json.zst',
+                }
+
 ##############################################
 ### Helper functions
+
+
+def read_pkl_zstd(obj, unpickle=True):
+    """
+    Deserializer from a pickled object compressed with zstandard.
+
+    Parameters
+    ----------
+    obj : bytes or str
+        Either a bytes object that has been pickled and compressed or a str path to the file object.
+    unpickle : bool
+        Should the bytes object be unpickled or left as bytes?
+
+    Returns
+    -------
+    Python object
+    """
+    dctx = zstd.ZstdDecompressor()
+    if isinstance(obj, str):
+        with open(obj, 'rb') as p:
+            obj1 = dctx.decompress(p.read())
+    elif isinstance(obj, bytes):
+        obj1 = dctx.decompress(obj)
+    else:
+        raise TypeError('obj must either be a str path or a bytes object')
+
+    if unpickle:
+        obj1 = pickle.loads(obj1)
+
+    return obj1
+
+
+def read_json_zstd(obj):
+    """
+    Deserializer from a compressed zstandard json object to a dictionary.
+
+    Parameters
+    ----------
+    obj : bytes
+        The bytes object.
+
+    Returns
+    -------
+    Dict
+    """
+    dctx = zstd.ZstdDecompressor()
+    obj1 = dctx.decompress(obj)
+    dict1 = orjson.loads(obj1)
+
+    return dict1
+
+
+def s3_connection(conn_config, max_pool_connections=20):
+    """
+    Function to establish a connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
+
+    Parameters
+    ----------
+    conn_config : dict
+        A dictionary of the connection info necessary to establish an S3 connection.
+    max_pool_connections : int
+        The number of simultaneous connections for the S3 connection.
+
+    Returns
+    -------
+    S3 client object
+    """
+    s3_config = copy.deepcopy(conn_config)
+
+    if 'config' in s3_config:
+        config0 = s3_config.pop('config')
+        config0.update({'max_pool_connections': max_pool_connections})
+        config1 = boto3.session.Config(**config0)
+
+        s3_config1 = s3_config.copy()
+        s3_config1.update({'config': config1})
+
+        s3 = boto3.client(**s3_config1)
+    else:
+        s3_config.update({'config': botocore.config.Config(max_pool_connections=max_pool_connections)})
+        s3 = boto3.client(**s3_config)
+
+    return s3
 
 
 def get_results_obj_s3(obj_key, connection_config, bucket, max_connections, return_xr=True):
@@ -120,14 +215,6 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
         return json1
     else:
         raise ValueError("output must be one of 'Dataset', 'DataArray', 'Dict', or 'json'")
-
-
-
-
-
-
-
-
 
 
 
