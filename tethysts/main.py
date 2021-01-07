@@ -3,15 +3,11 @@ Created on 2020-11-05.
 
 @author: Mike K
 """
-import sys
 import os
-import io
-import numpy as np
 import xarray as xr
 import pandas as pd
 import orjson
 # import yaml
-from time import sleep
 from datetime import datetime
 import copy
 from multiprocessing.pool import ThreadPool

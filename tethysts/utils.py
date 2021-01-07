@@ -2,14 +2,9 @@
 
 
 """
-import sys
-import os
-import io
-import numpy as np
 import xarray as xr
 import pandas as pd
 import orjson
-from time import sleep
 from datetime import datetime
 import zstandard as zstd
 import pickle
@@ -17,7 +12,7 @@ import copy
 import boto3
 import botocore
 from multiprocessing.pool import ThreadPool
-import shapely
+# import shapely
 
 pd.options.display.max_columns = 10
 
@@ -215,7 +210,3 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
         return json1
     else:
         raise ValueError("output must be one of 'Dataset', 'DataArray', 'Dict', or 'json'")
-
-
-
-
