@@ -21,6 +21,7 @@ pd.options.display.max_columns = 10
 ### Reference objects
 
 key_patterns = {'results': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/results.nc.zst',
+                'results_buffer': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/results_buffer.nc.zst',
                 'datasets': 'tethys/v2/datasets.json.zst',
                 'stations': 'tethys/v2/{dataset_id}/stations.json.zst',
                 'station': 'tethys/v2/{dataset_id}/{station_id}/station.json.zst',
