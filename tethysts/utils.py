@@ -131,7 +131,7 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None):
     bucket : str
         The bucket name.
     compression : None or str
-        The compression of the object that should be uncompressed. Options include zstd.
+        The compression of the object that should be decompressed. Options include zstd.
 
     Returns
     -------
