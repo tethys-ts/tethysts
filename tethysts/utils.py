@@ -2,6 +2,7 @@
 
 
 """
+import requests
 import xarray as xr
 import pandas as pd
 import orjson
@@ -28,11 +29,13 @@ key_patterns = {'results': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/resul
                 'dataset': 'tethys/v2/{dataset_id}/dataset.json.zst',
                 }
 
+b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'
+
 ##############################################
 ### Helper functions
 
 
-def read_pkl_zstd(obj, unpickle=True):
+def read_pkl_zstd(obj, unpickle=False):
     """
     Deserializer from a pickled object compressed with zstandard.
 
@@ -82,14 +85,14 @@ def read_json_zstd(obj):
     return dict1
 
 
-def s3_connection(conn_config, max_pool_connections=20):
+def s3_connection(connection_config, max_pool_connections=20):
     """
     Function to establish a connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
 
     Parameters
     ----------
-    conn_config : dict
-        A dictionary of the connection info necessary to establish an S3 connection.
+    connection_config : dict
+        A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
     max_pool_connections : int
         The number of simultaneous connections for the S3 connection.
 
@@ -97,7 +100,7 @@ def s3_connection(conn_config, max_pool_connections=20):
     -------
     S3 client object
     """
-    s3_config = copy.deepcopy(conn_config)
+    s3_config = copy.deepcopy(connection_config)
 
     if 'config' in s3_config:
         config0 = s3_config.pop('config')
@@ -115,21 +118,43 @@ def s3_connection(conn_config, max_pool_connections=20):
     return s3
 
 
-def get_results_obj_s3(obj_key, connection_config, bucket, max_connections, return_xr=True):
+def get_object_s3(obj_key, connection_config, bucket, compression=None):
     """
+    General function to get an object from an S3 bucket.
 
+    Parameters
+    ----------
+    obj_key : str
+        The object key in the S3 bucket.
+    connection_config : dict
+        A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
+    bucket : str
+        The bucket name.
+    compression : None or str
+        The compression of the object that should be uncompressed. Options include zstd.
+
+    Returns
+    -------
+    bytes
+        bytes object of the S3 object.
     """
-    s3 = s3_connection(connection_config, max_pool_connections=max_connections)
+    if isinstance(connection_config, dict):
+        s3 = s3_connection(connection_config)
 
-    ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
-    ts_obj = ts_resp.pop('Body')
+        ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
+        ts_obj = ts_resp.pop('Body').read()
 
-    if return_xr:
-        ts_xr = xr.open_dataset(read_pkl_zstd(ts_obj.read(), False))
+    elif isinstance(connection_config, str):
+        url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
+        ts_obj = requests.get(url).content
 
-        return ts_xr
-    else:
-        return ts_obj.read()
+    if isinstance(compression, str):
+        if compression == 'zstd':
+            ts_obj = read_pkl_zstd(ts_obj, False)
+        else:
+            raise ValueError('compression option can only be zstd or None')
+
+    return ts_obj
 
 
 def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, remove_height=False):

@@ -12,7 +12,7 @@ from datetime import datetime
 import copy
 from multiprocessing.pool import ThreadPool
 # import shapely
-from tethysts.utils import get_results_obj_s3, result_filters, process_results_output, s3_connection, read_json_zstd, key_patterns
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns
 
 pd.options.display.max_columns = 10
 
@@ -21,10 +21,10 @@ pd.options.display.max_columns = 10
 ### Parameters
 
 # base_dir = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
-#
+
 # with open(os.path.join(base_dir, 'parameters.yml')) as param:
 #     param = yaml.safe_load(param)
-#
+
 # remotes_list = param['remotes']
 
 ##############################################
@@ -72,7 +72,7 @@ class Tethys(object):
         ----------
         remotes_list : list of dict
             list of dict of the S3 remotes to access. The dicts must contain:
-            bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+            bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
         threads : int
             The number of threads to use. I.E. the number of simultaneous remote reads.
 
@@ -94,19 +94,15 @@ class Tethys(object):
         ----------
         remote : dict
             dict of the S3 remote to access. The dict must contain:
-            bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+            bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
 
         Returns
         -------
         None
         """
-        s3 = s3_connection(remote['connection_config'])
-
         try:
-            ds_resp = s3.get_object(Key=self._key_patterns['datasets'], Bucket=remote['bucket'])
-
-            ds_obj = ds_resp.pop('Body')
-            ds_list = read_json_zstd(ds_obj.read())
+            ds_obj = get_object_s3(self._key_patterns['datasets'], remote['connection_config'], remote['bucket'])
+            ds_list = read_json_zstd(ds_obj)
 
             ds_list2 = copy.deepcopy(ds_list)
             # [l.pop('properties') for l in ds_list2]
@@ -141,15 +137,11 @@ class Tethys(object):
 
         remote = self._remotes[dataset_id]
 
-        s3 = s3_connection(remote['connection_config'])
-
         site_key = self._key_patterns['stations'].format(dataset_id=dataset_id)
 
         try:
-            stn_resp = s3.get_object(Key=site_key, Bucket=remote['bucket'])
-
-            stn_obj = stn_resp.pop('Body')
-            stn_list = read_json_zstd(stn_obj.read())
+            stn_obj = get_object_s3(site_key, remote['connection_config'], remote['bucket'])
+            stn_list = read_json_zstd(stn_obj)
             stn_list = [s for s in stn_list if isinstance(s, dict)]
 
             self._stations.update({dataset_id: {s['station_id']: s for s in stn_list}})
@@ -177,10 +169,10 @@ class Tethys(object):
         -------
         list
         """
+        if dataset_id not in self._stations:
+            stns = self.get_stations(dataset_id)
+
         dataset_stn = self._stations[dataset_id][station_id]
-        dataset = self._datasets[dataset_id]
-        parameter = dataset['parameter']
-        remote = self._remotes[dataset_id]
 
         run_dates = [ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in dataset_stn['results_object_key']]
 
@@ -191,6 +183,9 @@ class Tethys(object):
         """
 
         """
+        if dataset_id not in self._stations:
+            stns = self.get_stations(dataset_id)
+
         dataset_stn = self._stations[dataset_id][station_id]
 
         obj_keys = dataset_stn['results_object_key']
@@ -198,7 +193,7 @@ class Tethys(object):
         obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
         last_key = obj_keys_df.iloc[obj_keys_df['run_date'].idxmax()]['key']
 
-        bucket = obj_keys[0]['bucket']
+        # bucket = obj_keys[0]['bucket']
 
         ## Set the correct run_date
         if isinstance(run_date, (str, pd.Timestamp)):
@@ -264,7 +259,8 @@ class Tethys(object):
         obj_key = self._get_results_obj_key_s3(dataset_id, station_id, run_date)
 
         ## Get results
-        ts_xr = get_results_obj_s3(obj_key, remote['connection_config'], remote['bucket'], max_connections)
+        ts_obj = get_object_s3(obj_key, remote['connection_config'], remote['bucket'], 'zstd')
+        ts_xr = xr.open_dataset(ts_obj)
 
         ## Filters
         ts_xr1 = result_filters(ts_xr, from_date, to_date, from_mod_date, to_mod_date, remove_height)
@@ -326,17 +322,20 @@ class Tethys(object):
 ### Testing
 
 # remote = remotes_list[0]
+# remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
 # dataset_id = '269eda15b277ffd824c223fc'
+# dataset_id = '10456b32c1eb6f20339d16b4'
 # station_id = 'ff4cb2c00d3b73b5f9266054'
+# station_id = 'fa8bd1e8ee0b2b777a49db00'
 # station_ids = [station_id, 'f74d29232b5d5c094effe9e2']
 #
 #
-# self = Tethys([remotes_list[0]])
+# self = Tethys([remote])
 # self = Tethys(remotes_list)
 #
 # stn_list1 = self.get_stations(dataset_id)
-#
+# run_dates = self.get_run_dates(dataset_id, station_id)
 # data1 = self.get_results(dataset_id, station_id, output='Dataset')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, output='DataArray')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, remove_height=True, output='DataArray')
