@@ -10,7 +10,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 name = 'tethysts'
 main_package = 'tethysts'
 datasets = 'datasets/time_series'
-version = '0.0.22'
+version = '0.0.23'
 descrip = 'tethys time series S3 extraction'
 
 # The below code is for readthedocs. To have sphinx/readthedocs interact with
@@ -19,7 +19,7 @@ descrip = 'tethys time series S3 extraction'
 if os.environ.get('READTHEDOCS', False) == 'True':
     INSTALL_REQUIRES = []
 else:
-    INSTALL_REQUIRES = ['zstandard', 'pandas', 'xarray', 'scipy', 'boto3', 'orjson']
+    INSTALL_REQUIRES = ['zstandard', 'pandas', 'xarray', 'scipy', 'boto3', 'orjson', 'requests']
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
