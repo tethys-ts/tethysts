@@ -4,6 +4,7 @@ Created on 2020-11-05.
 @author: Mike K
 """
 import os
+import numpy as np
 import xarray as xr
 import pandas as pd
 import orjson
@@ -174,7 +175,7 @@ class Tethys(object):
 
         dataset_stn = self._stations[dataset_id][station_id]
 
-        run_dates = [ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in dataset_stn['results_object_key']]
+        run_dates = np.unique([ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in dataset_stn['results_object_key']]).tolist()
 
         return run_dates
 
@@ -191,7 +192,8 @@ class Tethys(object):
         obj_keys = dataset_stn['results_object_key']
         obj_keys_df = pd.DataFrame(obj_keys)
         obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
-        last_key = obj_keys_df.iloc[obj_keys_df['run_date'].idxmax()]['key']
+        last_run_date = obj_keys_df['run_date'].max()
+        last_key = obj_keys_df[obj_keys_df['run_date'] == last_run_date]['key']
 
         # bucket = obj_keys[0]['bucket']
 
@@ -205,7 +207,7 @@ class Tethys(object):
                 print('Requested run_date is not available, returning last run_date results')
                 obj_key = last_key
             else:
-                obj_key = obj_key_df.iloc[0]['key']
+                obj_key = obj_key_df['key']
         else:
             obj_key = last_key
 
@@ -259,11 +261,17 @@ class Tethys(object):
         obj_key = self._get_results_obj_key_s3(dataset_id, station_id, run_date)
 
         ## Get results
-        ts_obj = get_object_s3(obj_key, remote['connection_config'], remote['bucket'], 'zstd')
-        ts_xr = xr.open_dataset(ts_obj)
+        data_list = []
+        for key in obj_key:
+            ts_obj = get_object_s3(key, remote['connection_config'], remote['bucket'], 'zstd')
+            ts_xr = xr.open_dataset(ts_obj)
+            data_list.append(ts_xr)
+
+        xr2 = xr.concat(data_list, dim='time', data_vars='minimal')
+        xr3 = xr2.sel(time=~xr2.get_index('time').duplicated('last'))
 
         ## Filters
-        ts_xr1 = result_filters(ts_xr, from_date, to_date, from_mod_date, to_mod_date, remove_height)
+        ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date, remove_height)
 
         ## Output
         output1 = process_results_output(ts_xr1, parameter, modified_date, quality_code, output)
@@ -324,9 +332,9 @@ class Tethys(object):
 # remote = remotes_list[0]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
-# dataset_id = '269eda15b277ffd824c223fc'
+# dataset_id = 'dddb02cd5cb7ae191311ab19'
 # dataset_id = '10456b32c1eb6f20339d16b4'
-# station_id = 'ff4cb2c00d3b73b5f9266054'
+# station_id = 'fedeb59e6c7f47597a7d47c7'
 # station_id = 'fa8bd1e8ee0b2b777a49db00'
 # station_ids = [station_id, 'f74d29232b5d5c094effe9e2']
 #
