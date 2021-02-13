@@ -329,13 +329,14 @@ class Tethys(object):
 ######################################
 ### Testing
 
+# remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = remotes_list[0]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
 # dataset_id = 'dddb02cd5cb7ae191311ab19'
 # dataset_id = '10456b32c1eb6f20339d16b4'
 # station_id = 'fedeb59e6c7f47597a7d47c7'
-# station_id = 'fa8bd1e8ee0b2b777a49db00'
+# station_id = '0058257fbb1041522bd9d68a'
 # station_ids = [station_id, 'f74d29232b5d5c094effe9e2']
 #
 #
