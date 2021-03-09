@@ -22,10 +22,10 @@ remotes_list = param['remotes']
 remote = remotes_list[0]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
-# dataset_id = '4edc94c19bf074027bc7c099'
+dataset_id = '4edc94c19bf074027bc7c099'
 # dataset_id = '10456b32c1eb6f20339d16b4'
 # station_id = 'f79f0ddc99428b73c2293513'
-# station_id = '0058257fbb1041522bd9d68a'
+station_id = 'ffff46f5ae34182e0b779a65'
 # station_ids = [station_id, 'f74d29232b5d5c094effe9e2']
 # dataset_id='74c5bcd07846abae0e28ddd2'
 # station_id='fabdf416a8644a713e221fd6'
@@ -38,7 +38,7 @@ self = Tethys(remotes_list)
 #
 stn_list1 = self.get_stations(dataset_id)
 # run_dates = self.get_run_dates(dataset_id, station_id)
-data1 = self.get_results(dataset_id, station_id, output='Dataset')
+data1 = self.get_results(dataset_id, station_id, remove_height=True, output='Dataset')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, output='DataArray')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, remove_height=True, output='DataArray')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, output='Dict')
