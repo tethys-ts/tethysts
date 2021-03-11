@@ -13,6 +13,7 @@ import copy
 import boto3
 import botocore
 from multiprocessing.pool import ThreadPool
+from time import sleep
 # import shapely
 
 pd.options.display.max_columns = 10
@@ -118,7 +119,7 @@ def s3_connection(connection_config, max_pool_connections=20):
     return s3
 
 
-def get_object_s3(obj_key, connection_config, bucket, compression=None):
+def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=5):
     """
     General function to get an object from an S3 bucket.
 
@@ -132,27 +133,40 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None):
         The bucket name.
     compression : None or str
         The compression of the object that should be decompressed. Options include zstd.
+    counter : int
+        Number of times to retry to get the object.
 
     Returns
     -------
     bytes
         bytes object of the S3 object.
     """
-    if isinstance(connection_config, dict):
-        s3 = s3_connection(connection_config)
+    counter1 = counter
+    while True:
+        try:
+            if isinstance(connection_config, dict):
+                s3 = s3_connection(connection_config)
 
-        ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
-        ts_obj = ts_resp.pop('Body').read()
+                ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
+                ts_obj = ts_resp.pop('Body').read()
 
-    elif isinstance(connection_config, str):
-        url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
-        ts_obj = requests.get(url).content
+            elif isinstance(connection_config, str):
+                url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
+                ts_obj = requests.get(url).content
 
-    if isinstance(compression, str):
-        if compression == 'zstd':
-            ts_obj = read_pkl_zstd(ts_obj, False)
-        else:
-            raise ValueError('compression option can only be zstd or None')
+            if isinstance(compression, str):
+                if compression == 'zstd':
+                    ts_obj = read_pkl_zstd(ts_obj, False)
+                else:
+                    raise ValueError('compression option can only be zstd or None')
+            break
+        except:
+            if counter1 == 0:
+                raise ValueError('Could not properly extract the object after several tries')
+            else:
+                print('Could not properly extract the object; trying again in 5 seconds')
+                counter1 = counter1 - 1
+                sleep(5)
 
     return ts_obj
 
