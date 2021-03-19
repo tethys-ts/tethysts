@@ -256,14 +256,17 @@ class Tethys(object):
         obj_key = self._get_results_obj_key_s3(dataset_id, station_id, run_date)
 
         ## Get results
-        data_list = []
-        for key in obj_key:
-            ts_obj = get_object_s3(key, remote['connection_config'], remote['bucket'], 'zstd')
-            ts_xr = xr.open_dataset(ts_obj)
-            data_list.append(ts_xr)
+        # data_list = []
+        # for key in obj_key:
+        #     ts_obj = get_object_s3(key, remote['connection_config'], remote['bucket'], 'zstd')
+        #     ts_xr = xr.open_dataset(ts_obj)
+        #     data_list.append(ts_xr)
 
-        xr2 = xr.concat(data_list, dim='time', data_vars='minimal')
-        xr3 = xr2.sel(time=~xr2.get_index('time').duplicated('last'))
+        # xr2 = xr.concat(data_list, dim='time', data_vars='minimal')
+        # xr3 = xr2.sel(time=~xr2.get_index('time').duplicated('last'))
+
+        ts_obj = get_object_s3(obj_key.iloc[0], remote['connection_config'], remote['bucket'], 'zstd')
+        xr3 = xr.open_dataset(ts_obj)
 
         ## Filters
         ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date, remove_height)
