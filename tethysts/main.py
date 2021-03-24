@@ -35,7 +35,11 @@ class Tethys(object):
     ----------
     remotes_list : list of dict
         list of dict of the S3 remotes to access. The dicts must contain:
-        bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+        bucket and connection_config.
+        bucket : str
+            A string of the bucket name.
+        connection_config : dict or str
+        A dict of strings of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. Or it could be a string of the public_url endpoint.
 
     Returns
     -------
@@ -209,7 +213,7 @@ class Tethys(object):
         return obj_key
 
 
-    def get_results(self, dataset_id, station_id, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray', max_connections=10):
+    def get_results(self, dataset_id, station_id, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray'):
         """
         Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
 
@@ -277,7 +281,7 @@ class Tethys(object):
         return output1
 
 
-    def get_bulk_results(self, dataset_id, station_ids, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray', threads=10):
+    def get_bulk_results(self, dataset_id, station_ids, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray', threads=30):
         """
         Function to bulk query the time series data given a specific dataset_id and a list of site_ids. Multiple optional outputs.
 
@@ -309,6 +313,8 @@ class Tethys(object):
                 DataArray - return the requested dataset parameter as an xarray DataArray,
                 Dict - return a dictionary of results from the DataArray,
                 json - return a json str of the Dict.
+        threads : int
+            The number of simultaneous downloads.
 
         Returns
         -------
