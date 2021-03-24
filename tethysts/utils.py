@@ -86,7 +86,7 @@ def read_json_zstd(obj):
     return dict1
 
 
-def s3_connection(connection_config, max_pool_connections=20):
+def s3_connection(connection_config, max_pool_connections=30):
     """
     Function to establish a connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
 

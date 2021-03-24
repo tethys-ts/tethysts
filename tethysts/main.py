@@ -39,7 +39,7 @@ class Tethys(object):
         bucket : str
             A string of the bucket name.
         connection_config : dict or str
-        A dict of strings of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. Or it could be a string of the public_url endpoint.
+            A dict of strings of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. Or it could be a string of the public_url endpoint.
 
     Returns
     -------
@@ -72,7 +72,11 @@ class Tethys(object):
         ----------
         remotes_list : list of dict
             list of dict of the S3 remotes to access. The dicts must contain:
-            bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
+            bucket and connection_config.
+            bucket : str
+                A string of the bucket name.
+            connection_config : dict or str
+                A dict of strings of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. Or it could be a string of the public_url endpoint.
         threads : int
             The number of threads to use. I.E. the number of simultaneous remote reads.
 
@@ -94,7 +98,11 @@ class Tethys(object):
         ----------
         remote : dict
             dict of the S3 remote to access. The dict must contain:
-            bucket and connection_config. bucket is a string with the bucket name. connection_config is a dict of service_name, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
+            bucket and connection_config.
+            bucket : str
+                A string of the bucket name.
+            connection_config : dict or str
+                A dict of strings of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. Or it could be a string of the public_url endpoint.
 
         Returns
         -------
@@ -132,9 +140,6 @@ class Tethys(object):
         list of dict
             of station data
         """
-        # dataset = self._datasets_sites[dataset_id]
-        # if not hasattr(self, '_datasets_sites'):
-
         remote = self._remotes[dataset_id]
 
         site_key = self._key_patterns['stations'].format(dataset_id=dataset_id)
@@ -146,7 +151,7 @@ class Tethys(object):
 
             self._stations.update({dataset_id: {s['station_id']: s for s in stn_list}})
 
-            ## Run spatial query here!
+            # TODO: Run spatial query here!
 
             return stn_list
 
@@ -193,8 +198,6 @@ class Tethys(object):
         obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
         last_run_date = obj_keys_df['run_date'].max()
         last_key = obj_keys_df[obj_keys_df['run_date'] == last_run_date]['key']
-
-        # bucket = obj_keys[0]['bucket']
 
         ## Set the correct run_date
         if isinstance(run_date, (str, pd.Timestamp)):
@@ -260,15 +263,6 @@ class Tethys(object):
         obj_key = self._get_results_obj_key_s3(dataset_id, station_id, run_date)
 
         ## Get results
-        # data_list = []
-        # for key in obj_key:
-        #     ts_obj = get_object_s3(key, remote['connection_config'], remote['bucket'], 'zstd')
-        #     ts_xr = xr.open_dataset(ts_obj)
-        #     data_list.append(ts_xr)
-
-        # xr2 = xr.concat(data_list, dim='time', data_vars='minimal')
-        # xr3 = xr2.sel(time=~xr2.get_index('time').duplicated('last'))
-
         ts_obj = get_object_s3(obj_key.iloc[0], remote['connection_config'], remote['bucket'], 'zstd')
         xr3 = xr.open_dataset(ts_obj)
 
@@ -289,7 +283,7 @@ class Tethys(object):
         ----------
         dataset_id : str
             The hashed str of the dataset_id.
-        site_ids : list of str
+        station_ids : list of str
             A list of hashed str of the site_ids.
         from_date : str, Timestamp, datetime, or None
             The start date of the selection.
