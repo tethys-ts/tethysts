@@ -314,7 +314,7 @@ class Tethys(object):
         -------
         A dictionary of station_id key to a value of whatever the output was set to.
         """
-        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, remove_height, output, threads) for s in station_ids]
+        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, remove_height, output) for s in station_ids]
 
         output = ThreadPool(threads).starmap(self.get_results, lister)
 
