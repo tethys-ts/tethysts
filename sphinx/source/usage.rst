@@ -26,6 +26,7 @@ Let's say you've got a bucket called fire-emergency-nz and you've been told that
    :suppress:
 
    from tethysts import Tethys
+   from pprint import pprint as print
 
    remote = {'connection_config': 'https://b2.tethys-ts.xyz', 'bucket': 'fire-emergency-nz'}
    dataset_id = 'dddb02cd5cb7ae191311ab19'
