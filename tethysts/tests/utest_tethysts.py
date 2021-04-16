@@ -23,7 +23,8 @@ remote = remotes_list[0]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
 dataset_id = '4edc94c19bf074027bc7c099'
-# dataset_id = '10456b32c1eb6f20339d16b4'
+# dataset_id = 'dddb02cd5cb7ae191311ab19'
+station_id = 'fedeb59e6c7f47597a7d47c7'
 # station_id = 'f79f0ddc99428b73c2293513'
 station_id = '6b75a7fb1453ef94148bda19'
 # station_ids = [station_id, 'f74d29232b5d5c094effe9e2']

@@ -64,7 +64,7 @@ class Tethys(object):
             pass
 
 
-    def get_remotes(self, remotes_list, threads=20):
+    def get_remotes(self, remotes_list, threads=30):
         """
         The function to get many datasets from many remotes.
 
@@ -326,4 +326,3 @@ class Tethys(object):
 
 ######################################
 ### Testing
-
