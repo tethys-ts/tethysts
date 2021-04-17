@@ -12,6 +12,8 @@ The data in those buckets are organised in three layers:
   - Stations
   - Results
 
+Examples
+---------
 You first need to figure out what datasets exist in each bucket.
 Let's say you've got a bucket called fire-emergency-nz and you've been told that the connection_config is https://b2.tethys-ts.xyz:
 
