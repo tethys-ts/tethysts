@@ -36,6 +36,7 @@ class Tethys(object):
     remotes_list : list of dict
         list of dict of the S3 remotes to access. The dicts must contain:
         bucket and connection_config.
+        
         bucket : str
             A string of the bucket name.
         connection_config : dict or str
