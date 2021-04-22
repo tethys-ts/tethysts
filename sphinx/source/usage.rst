@@ -7,8 +7,8 @@ This section will describe how to use the tethysts package. The functions depend
 
 All files/objects in S3 object storage are stored in buckets. You can think of these buckets as root folders housing data files.
 
-The data in those buckets are organised in three layers:
-  - Datasets
+The datasets in those buckets are organised in three layers:
+  - Dataset metadata
   - Stations
   - Results
 
@@ -35,7 +35,7 @@ Let's say you've got a bucket called fire-emergency-nz and you've been told that
    station_id = 'fedeb59e6c7f47597a7d47c7'
 
 
-Initialise the class to determine the available datasets:
+Initialise the class to get the metadata about the available datasets:
 
 .. ipython:: python
 
@@ -70,7 +70,7 @@ The get_results method has many input options. Take a look at the reference page
   results = t1.get_results(dataset_id, station_id, remove_height=True, output='Dataset')
   results
 
-Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the previous dataset and station dictionary data. The default output type is an xarray DataArray, which does not contain the station data, but does contain the dataset data. The results are stored/structured according to CF conventions v1.8.
+Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the previous dataset and station dictionary data. The default output type is an xarray DataArray, which does not contain the station data, but does contain the dataset data. A dictionary can also be returned which is structured according to an xarray DataArray. The results are stored/structured according to CF conventions v1.8.
 
 If a run_date is not passed to the get_results method, then the latest run date will be returned. If you'd like to list all the run dates and to choose which run date you'd like to pass to the get_results method, then you can use the get_run_dates method.
 
@@ -78,3 +78,7 @@ If a run_date is not passed to the get_results method, then the latest run date 
 
   run_dates = t1.get_run_dates(dataset_id, station_id)
   run_dates
+
+Tethys web API
+--------------
+The `Tethys web API <https://api.tethys-ts.xyz/docs>`_ uses all of the same function names and associated input parameters as the Python package. But in most cases, users should use the Python package instead of the web API as it will be faster, more flexible, and won't put load on the VM running the web API.
