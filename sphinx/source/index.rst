@@ -13,6 +13,7 @@ The GitHub repository is found `here <https://github.com/tethys-ts/tethysts>`_.
    :caption: Sections
 
    installation
+   design
    usage
    package_references
    license-terms

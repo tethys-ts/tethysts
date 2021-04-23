@@ -5,9 +5,7 @@ Background
 -----------
 This section will describe how to use the tethysts package. The functions depend heavily on the xarray package. Nearly all outputs are either as xarray Datasets or dictionaries.
 
-All files/objects in S3 object storage are stored in buckets. You can think of these buckets as root folders housing data files.
-
-The datasets in those buckets are organised in three layers:
+The datasets are organised in three layers:
   - Dataset metadata
   - Stations
   - Results
@@ -58,7 +56,7 @@ Once you've decided which dataset you want (i.e. mean hourly air temperature), w
   my_station = [s for s in stations if (s['ref'] == 'waeranga')][0]
   my_station
 
-Again, the stations object is a list of dictionaries. Most of the data in each dictionary should be self-explanitory. But what you'll need next is to pick a station and write down the station_id just like you did with the dataset_id.
+Again, the stations object is a list of dictionaries. Most of the data in each dictionary should be self-explanatory. But what you'll need next is to pick a station and write down the station_id just like you did with the dataset_id.
 
 To get the results (the time series data), you'll need a dataset_id and station_id. Internally, the results are broken up by dataset and station.
 The get_results method has many input options. Take a look at the reference page for a description of all the options.
