@@ -32,7 +32,7 @@ The Tethys data model and implementation draws on the SensorThings API for its s
 
 The time series data itself is stored in an entity called a **Result**. In addition to the temporal dimension, the spatial offset of where the measurement is actually taken is included as a dimension. Though in most use cases, this offset dimension is simply the height above our reference point as in our earlier example. If a weather station measured air temperature at 2 m above the ground (our reference point), then 2 m height becomes our offset. The Result may also include any `ancillary variables <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.8/cf-conventions.html#ancillary-data>`_ like quality or error codes that relate directly to measurement parameter along the same dimension. Although all of the previous examples related to physical measurements in the field, the results can be derived from simulations or any other method as long as it represents a geospatial time series.
 
-.. figure:: img/flow_diagram_tethys_v03-db diagram 2.png
+.. figure:: img/flow_diagram_tethys_v03.png
 
 	 The entity relationship diagram of the Tethys data model.
 
