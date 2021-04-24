@@ -40,15 +40,9 @@ In Tethys, all data is stored as NetCDF objects housed in an `S3 compatible obje
 
 The NetCDF storage object was used because it is widely used in the hydrologic sciences, has a flexible enough data structure, the CF conventions are well developed, it can contain metadata about the results making it "self-describing", and it can be easily converted to JSON for http transfer. The current `CF conventions 1.8 <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.8/cf-conventions.html>`_ are followed as closely as reasonably possible with the example called `Single time series, including deviations from a nominal fixed spatial location <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.8/cf-conventions.html#_single_time_series_including_deviations_from_a_nominal_fixed_spatial_location>`_ being the dominant data model used in Tethys. Though the NetCDF objects are created following the CF conventions, more metadata is added to the objects to be more self-describing. The `CF standard names <http://cfconventions.org/standard-names.html>`_ (vocabulary) are added to the NetCDF objects per the conventions, but as the majority of the CF standard names relate to atmospheric science the `ODM2 controlled vocabulary <http://vocabulary.odm2.org/>`_ are used as the primary parameter names.
 
+The choices of the data model and the software implementation grew organically into the current solution. The S3 object storage and the NetCDF format placed limitations on the data model that would not necessarily exist with a more traditional relational database (e.g. more rich and comprehensive data model, more advanced transaction types, etc), but provide other benefits that outweigh these limitations (e.g. scalability, simplicity, easy user uptake, etc).
+
+
+
+
 More to come...
-
-
-
-
-
-.. All files/objects in S3 object storage are stored in buckets. You can think of these buckets as root folders housing data files.
-..
-.. The datasets in those buckets are organised in three layers:
-..   - Dataset metadata
-..   - Stations
-..   - Results
