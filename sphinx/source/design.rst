@@ -34,7 +34,7 @@ The time series data itself is stored in an entity called a **Result**. In addit
 
 .. figure:: img/flow_diagram_tethys_v03.png
 
-	 The entity relationship diagram of the Tethys data model.
+	 The entity relationship diagram of the Tethys data model. The Dataset metadata describes the dataset as a whole. One Dataset can have many Stations which contain the unique data about the Station as well as summary data about the associated Result. The Result contains all of the time series data associated with a particular Station.
 
 In Tethys, all data is stored as NetCDF objects housed in an `S3 compatible object storage system <https://en.wikipedia.org/wiki/Amazon_S3>`_. An S3 object storage system was used because it is currently the cheapest cloud storage option available and allows for practically unlimited scaling both in storage and in access by users. Using the S3 API also allows for many more provider options rather than being forced to use a single provider with their own unique API.
 
