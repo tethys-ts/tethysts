@@ -59,15 +59,15 @@ class Tethys(object):
         setattr(self, '_key_patterns', key_patterns)
 
         if isinstance(remotes_list, list):
-            datasets = self.get_remotes(remotes_list)
+            datasets = self.get_datasets(remotes_list)
 
         else:
             pass
 
 
-    def get_remotes(self, remotes_list, threads=30):
+    def get_datasets(self, remotes_list, threads=30):
         """
-        The function to get many datasets from many remotes.
+        The function to get datasets from many remotes.
 
         Parameters
         ----------
@@ -79,19 +79,19 @@ class Tethys(object):
             connection_config : dict or str
                 A dict of strings of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. Or it could be a string of the public_url endpoint.
         threads : int
-            The number of threads to use. I.E. the number of simultaneous remote reads.
+            The number of threads to use. I.e. the number of simultaneous remote reads.
 
         Returns
         -------
         dict
             of datasets
         """
-        output = ThreadPool(threads).map(self.get_datasets, remotes_list)
+        output = ThreadPool(threads).map(self.get_remote_datasets, remotes_list)
 
         return self.datasets
 
 
-    def get_datasets(self, remote):
+    def get_remote_datasets(self, remote):
         """
         Get datasets from an individual remote. Saves result into the object.
 

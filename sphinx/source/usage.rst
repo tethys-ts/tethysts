@@ -46,6 +46,15 @@ In this example we only have one remote we want to check for datasets, but as yo
 
 The datasets object is a list of dictionaries with a lot of metadata about each dataset. It should tell you practically all you need to know about data contained in the results (e.g. parameter, units, data licence, owner, etc).
 
+Alternatively, you can initialise Tethys without anything and use the get_datasets method to get the datasets metadata separately:
+
+.. ipython:: python
+
+  t1 = Tethys()
+  datasets = t1.get_datasets([remote])
+  my_dataset = [d for d in datasets if (d['parameter'] == 'temperature') and (d['aggregation_statistic'] == 'mean')][0]
+  my_dataset
+
 Once you've decided which dataset you want (i.e. mean hourly air temperature), write down the dataset_id contained within the associated dictionary and pass it to the next method: get_stations.
 
 .. ipython:: python
