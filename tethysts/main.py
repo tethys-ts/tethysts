@@ -36,7 +36,7 @@ class Tethys(object):
     remotes_list : list of dict
         list of dict of the S3 remotes to access. The dicts must contain:
         bucket and connection_config.
-        
+
         bucket : str
             A string of the bucket name.
         connection_config : dict or str
@@ -127,7 +127,7 @@ class Tethys(object):
             print('No datasets.json.zst file in S3 bucket')
 
 
-    def get_stations(self, dataset_id):
+    def get_stations(self, dataset_id, results_object_keys=False):
         """
         Method to return the stations associated with a dataset.
 
@@ -135,6 +135,8 @@ class Tethys(object):
         ----------
         dataset_id : str
             The dataset_id of the dataset.
+        results_object_keys : bool
+            Shoud the results object keys be returned? The results object keys list the available results in Tethys.
 
         Returns
         -------
@@ -150,9 +152,12 @@ class Tethys(object):
             stn_list = read_json_zstd(stn_obj)
             stn_list = [s for s in stn_list if isinstance(s, dict)]
 
-            self._stations.update({dataset_id: {s['station_id']: s for s in stn_list}})
+            self._stations.update({dataset_id: {s['station_id']: s for s in copy.deepcopy(stn_list)}})
 
             # TODO: Run spatial query here!
+
+            if not results_object_keys:
+                s = [s.pop('results_object_key') for s in stn_list]
 
             return stn_list
 
