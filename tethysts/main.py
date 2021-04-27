@@ -273,7 +273,7 @@ class Tethys(object):
         xr3 = xr.open_dataset(ts_obj)
 
         ## Filters
-        ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date, remove_height)
+        ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date, remove_height).expand_dims('station_id').set_coords('station_id')
 
         ## Output
         output1 = process_results_output(ts_xr1, parameter, modified_date, quality_code, output)
@@ -283,7 +283,7 @@ class Tethys(object):
 
     def get_bulk_results(self, dataset_id, station_ids, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray', threads=30):
         """
-        Function to bulk query the time series data given a specific dataset_id and a list of site_ids. Multiple optional outputs.
+        Function to bulk query the time series data given a specific dataset_id and a list of station_ids. The output will be specified by the output parameter and will be concatenated along the station_id dimension.
 
         Parameters
         ----------
@@ -318,15 +318,23 @@ class Tethys(object):
 
         Returns
         -------
-        A dictionary of station_id key to a value of whatever the output was set to.
+        Format specified by the output parameter
+            Will be concatenated along the station_id dimension
         """
-        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, remove_height, output) for s in station_ids]
+        dataset = self._datasets[dataset_id]
+        parameter = dataset['parameter']
 
-        output = ThreadPool(threads).starmap(self.get_results, lister)
+        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, remove_height, 'Dataset') for s in station_ids]
 
-        output2 = dict(zip(station_ids, output))
+        output1 = ThreadPool(threads).starmap(self.get_results, lister)
+        output2 = [d if 'station_id' in list(d.coords) else d.expand_dims('station_id').set_coords('station_id') for d in output1]
 
-        return output2
+        xr_ds1 = xr.concat(output2, 'station_id')
+
+        ## Output
+        output3 = process_results_output(xr_ds1, parameter, modified_date, quality_code, output)
+
+        return output3
 
 
 
