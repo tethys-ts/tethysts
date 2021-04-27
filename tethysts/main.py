@@ -273,7 +273,10 @@ class Tethys(object):
         xr3 = xr.open_dataset(ts_obj)
 
         ## Filters
-        ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date, remove_height).expand_dims('station_id').set_coords('station_id')
+        ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date, remove_height)
+
+        if not 'station_id' in list(ts_xr1.coords):
+            ts_xr1 = ts_xr1.expand_dims('station_id').set_coords('station_id')
 
         ## Output
         output1 = process_results_output(ts_xr1, parameter, modified_date, quality_code, output)
