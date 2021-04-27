@@ -203,7 +203,7 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
             ts_xr1 = ts_xr1.sel(modified_date=slice(from_mod_date1, to_mod_date1))
 
     if remove_height:
-        ts_xr1 = ts_xr1.squeeze('height').drop('height')
+        ts_xr1 = ts_xr1.squeeze('height').drop_vars('height')
 
     return ts_xr1
 

@@ -51,7 +51,14 @@ def test_get_run_dates():
 def test_get_results(output):
     data1 = t1.get_results(dataset_id, station_id, remove_height=True, output=output)
 
-    assert len(data1) > 3
+    if output == 'Dataset':
+        assert len(data1.time) > 1000
+    elif output == 'DataArray':
+        assert len(data1.time) > 1000
+    elif output == 'Dict':
+        assert len(data1['coords']['time']['data']) > 1000
+    else:
+        raise ValueError('Forgot to put in new assertion')
 
 
 def test_get_bulk_results():
