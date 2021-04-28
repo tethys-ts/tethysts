@@ -12,8 +12,9 @@ import orjson
 from datetime import datetime
 import copy
 from multiprocessing.pool import ThreadPool
-# import shapely
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query
+from shapely.geometry import Point, Polygon, shape
+from typing import Optional, List, Any, Union
 
 pd.options.display.max_columns = 10
 
@@ -65,7 +66,7 @@ class Tethys(object):
             pass
 
 
-    def get_datasets(self, remotes_list, threads=30):
+    def get_datasets(self, remotes_list: List[dict], threads: int = 30):
         """
         The function to get datasets from many remotes.
 
@@ -91,7 +92,7 @@ class Tethys(object):
         return self.datasets
 
 
-    def get_remote_datasets(self, remote):
+    def get_remote_datasets(self, remote: dict):
         """
         Get datasets from an individual remote. Saves result into the object.
 
@@ -127,7 +128,13 @@ class Tethys(object):
             print('No datasets.json.zst file in S3 bucket')
 
 
-    def get_stations(self, dataset_id, results_object_keys=False):
+    def get_stations(self,
+                     dataset_id: str,
+                     query_geometry: Optional[dict] = None,
+                     lat: Optional[float] = None,
+                     lon: Optional[float] = None,
+                     distance: Optional[float] = None,
+                     results_object_keys: Optional[bool] = False):
         """
         Method to return the stations associated with a dataset.
 
@@ -147,25 +154,35 @@ class Tethys(object):
 
         site_key = self._key_patterns['stations'].format(dataset_id=dataset_id)
 
-        try:
-            stn_obj = get_object_s3(site_key, remote['connection_config'], remote['bucket'])
-            stn_list = read_json_zstd(stn_obj)
-            stn_list = [s for s in stn_list if isinstance(s, dict)]
+        if dataset_id in self._stations:
+            stn_dict = copy.deepcopy(self._stations[dataset_id])
+        else:
+            try:
+                stn_obj = get_object_s3(site_key, remote['connection_config'], remote['bucket'])
+                stn_list = read_json_zstd(stn_obj)
+                stn_dict = {s['station_id']: s for s in stn_list if isinstance(s, dict)}
 
-            self._stations.update({dataset_id: {s['station_id']: s for s in copy.deepcopy(stn_list)}})
+                self._stations.update({dataset_id: copy.deepcopy(stn_dict)})
 
-            # TODO: Run spatial query here!
+            except:
+                print('No stations.json.zst file in S3 bucket')
+                return None
 
-            if not results_object_keys:
-                s = [s.pop('results_object_key') for s in stn_list]
+        ## Spatial query
+        stn_ids = spatial_query(stn_dict, query_geometry, lat, lon, distance)
 
-            return stn_list
+        if isinstance(stn_ids, list):
+            stn_list1 = [stn_dict[s] for s in stn_ids]
+        else:
+            stn_list1 = list(stn_dict.values())
 
-        except:
-            print('No stations.json.zst file in S3 bucket')
+        if not results_object_keys:
+            s = [s.pop('results_object_key') for s in stn_list1]
+
+        return stn_list1
 
 
-    def get_run_dates(self, dataset_id, station_id):
+    def get_run_dates(self, dataset_id: str, station_id: str):
         """
         Function to get the run dates of a particular dataset and station.
 
@@ -190,7 +207,7 @@ class Tethys(object):
         return run_dates
 
 
-    def _get_results_obj_key_s3(self, dataset_id, station_id, run_date):
+    def _get_results_obj_key_s3(self, dataset_id: str, station_id: str, run_date: Union[str, pd.Timestamp]):
         """
 
         """
@@ -222,7 +239,18 @@ class Tethys(object):
         return obj_key
 
 
-    def get_results(self, dataset_id, station_id, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray'):
+    def get_results(self,
+                    dataset_id: str,
+                    station_id: str,
+                    from_date: Union[str, pd.Timestamp, datetime, None] = None,
+                    to_date: Union[str, pd.Timestamp, datetime, None] = None,
+                    from_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
+                    to_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
+                    modified_date: Union[str, pd.Timestamp, datetime, None] = None,
+                    quality_code: Optional[bool] = False,
+                    run_date: Union[str, pd.Timestamp, datetime, None] = None,
+                    remove_height: Optional[bool] = False,
+                    output: str = 'DataArray'):
         """
         Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
 
@@ -284,7 +312,19 @@ class Tethys(object):
         return output1
 
 
-    def get_bulk_results(self, dataset_id, station_ids, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, modified_date=False, quality_code=False, run_date=None, remove_height=False, output='DataArray', threads=30):
+    def get_bulk_results(self,
+                         dataset_id: str,
+                         station_ids: List[str],
+                         from_date: Union[str, pd.Timestamp, datetime, None] = None,
+                         to_date: Union[str, pd.Timestamp, datetime, None] = None,
+                         from_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
+                         to_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
+                         modified_date: Union[str, pd.Timestamp, datetime, None] = None,
+                         quality_code: Optional[bool] = False,
+                         run_date: Union[str, pd.Timestamp, datetime, None] = None,
+                         remove_height: Optional[bool] = False,
+                         output: str = 'DataArray',
+                         threads: int = 30):
         """
         Function to bulk query the time series data given a specific dataset_id and a list of station_ids. The output will be specified by the output parameter and will be concatenated along the station_id dimension.
 

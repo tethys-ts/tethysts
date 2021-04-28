@@ -14,7 +14,9 @@ import boto3
 import botocore
 from multiprocessing.pool import ThreadPool
 from time import sleep
-# import shapely
+from shapely.geometry import shape, Polygon, Point
+from shapely.strtree import STRtree
+from typing import Optional, List, Any, Union
 
 pd.options.display.max_columns = 10
 
@@ -34,6 +36,74 @@ b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'
 
 ##############################################
 ### Helper functions
+
+
+def get_nearest_station(stns, geom_query):
+    """
+
+    """
+    if isinstance(geom_query, dict):
+        geom_query = shape(geom_query)
+
+    geom1 = [shape(s['geometry']) for i, s in stns.items()]
+    strtree = STRtree(geom1)
+    res = strtree.nearest(geom_query)
+    res_id = res.wkb_hex
+
+    stn_id_dict = {shape(s['geometry']).wkb_hex: i for i, s in stns.items()}
+
+    stn_id = stn_id_dict[res_id]
+
+    return stn_id
+
+
+def get_intersected_stations(stns, geom_query):
+    """
+
+    """
+    if isinstance(geom_query, dict):
+        geom_query = shape(geom_query)
+
+    geom1 = [shape(s['geometry']) for i, s in stns.items()]
+    strtree = STRtree(geom1)
+    res = strtree.query(geom_query)
+    res_ids = [r.wkb_hex for r in res]
+
+    stn_id_dict = {shape(s['geometry']).wkb_hex: i for i, s in stns.items()}
+
+    stn_ids = [stn_id_dict[r] for r in res_ids]
+
+    return stn_ids
+
+
+def spatial_query(stns: dict,
+                  query_geometry: Optional[dict] = None,
+                  lat: Optional[float] = None,
+                  lon: Optional[float] = None,
+                  distance: Optional[float] = None):
+    """
+
+    """
+    if isinstance(lat, float) and isinstance(lon, float):
+        geom_query = Point(lon, lat)
+        if isinstance(distance, (int, float)):
+            geom_query = geom_query.buffer(distance)
+            stn_ids = get_intersected_stations(stns, geom_query)
+        else:
+            stn_ids = [get_nearest_station(stns, geom_query)]
+    elif isinstance(query_geometry, dict):
+        geom_query = shape(query_geometry)
+        if isinstance(geom_query, Point):
+            stn_ids = [get_nearest_station(stns, geom_query)]
+        elif isinstance(geom_query, Polygon):
+            stn_ids = get_intersected_stations(stns, geom_query)
+        else:
+            raise ValueError('query_geometry must be a Point or Polygon dict.')
+    else:
+        stn_ids = None
+
+    return stn_ids
+
 
 
 def read_pkl_zstd(obj, unpickle=False):
