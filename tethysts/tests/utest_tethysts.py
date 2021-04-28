@@ -29,14 +29,14 @@ remotes_list = param['remotes']
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
-dataset_id = '4edc94c19bf074027bc7c099'
-dataset_id = 'dddb02cd5cb7ae191311ab19'
-station_id = 'fedeb59e6c7f47597a7d47c7'
+# dataset_id = '4edc94c19bf074027bc7c099'
+# dataset_id = 'dddb02cd5cb7ae191311ab19'
+# station_id = 'fedeb59e6c7f47597a7d47c7'
 # station_id = 'fe9a63fae6f7fe58474bb3c0'
-station_id = '6b75a7fb1453ef94148bda19'
+# station_id = '6b75a7fb1453ef94148bda19'
 # station_ids = [station_id, '5d06c5a8065a26b51c19b241']
-# dataset_id='361ce2acd56b13da82390a69'
-# station_id='00128a218015a069cb94d360'
+dataset_id='361ce2acd56b13da82390a69'
+station_id='00128a218015a069cb94d360'
 # dataset_id='ad3156ce8245f725a5a0cda8'
 # station_id='6b5dc8c9ec394b2c4167f6b8'
 #
@@ -63,6 +63,7 @@ geom_query = shape(query_geometry).buffer(0.1)
 
 stn_list2 = self.get_stations(dataset_id, query_geometry)
 stn_list2 = self.get_stations(dataset_id, lat=-43.1, lon=171.1)
+data2 = self.get_nearest_results(dataset_id, query_geometry, remove_height=True, output='Dataset')
 
 stn = [s for s in stn_list1 if s['ref'] == '1071103']
 

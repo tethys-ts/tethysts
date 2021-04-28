@@ -21,6 +21,12 @@ station_ids = [station_id, 'fe9a63fae6f7fe58474bb3c0']
 
 outputs = ['Dataset', 'DataArray', 'Dict']
 
+geometry1 = {'type': 'Point', 'coordinates': [171.05, -43.1]}
+# geometry2 = shape(geometry1).buffer(0.5)
+lat = -43.1
+lon = 171.05
+distance = 0.5
+
 ######################################
 ### Testing
 
@@ -39,6 +45,10 @@ def test_get_stations():
     stn_list1 = t1.get_stations(dataset_id)
 
     assert len(stn_list1) > 200
+
+
+## Get the stations loaded in the object
+stn_list1 = t1.get_stations(dataset_id)
 
 
 def test_get_run_dates():
@@ -65,6 +75,64 @@ def test_get_bulk_results():
     data2 = t1.get_bulk_results(dataset_id, station_ids, remove_height=True, output='Dataset')
 
     assert len(data2) > 6
+
+
+def test_get_nearest_station1():
+    s1 = t1.get_stations(dataset_id, geometry1)
+
+    assert len(s1) == 1
+
+
+def test_get_nearest_station2():
+    s2 = t1.get_stations(dataset_id, lat=lat, lon=lon)
+
+    assert len(s2) == 1
+
+
+def test_get_intersection_stations1():
+    s3 = t1.get_stations(dataset_id, lat=lat, lon=lon, distance=distance)
+
+    assert len(s3) >= 3
+
+
+def test_get_nearest_results1():
+    s1 = t1.get_results(dataset_id, geometry=geometry1)
+
+    assert len(s1) == 7
+
+
+def test_get_nearest_results2():
+    s2 = t1.get_results(dataset_id, lat=lat, lon=lon)
+
+    assert len(s2) == 7
+
+
+# def test_get_intersection_stations1():
+#     s3 = t1.get_results(dataset_id, lat=lat, lon=lon, distance=distance)
+
+#     assert len(s3) >= 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
