@@ -10,4 +10,4 @@ Or conda::
 
 Requirements
 ------------
-The package dependencies are: zstandard, pandas, xarray, scipy, boto3, orjson, and requests.
+The package dependencies are: zstandard, pandas, xarray, scipy, boto3, orjson, requests, and shapely.
