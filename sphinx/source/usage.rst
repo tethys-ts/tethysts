@@ -117,15 +117,7 @@ Similar to the get_stations spatial query, the get_results method has a built-in
   results = t1.get_results(dataset_id, geometry=geometry, remove_height=True, output='Dataset')
   results
 
-If a run_date is not passed to the get_results method, then the latest run date will be returned. If you'd like to list all the run dates and to choose which run date you'd like to pass to the get_results method, then you can use the get_run_dates method.
-
-.. ipython:: python
-
-  run_dates = t1.get_run_dates(dataset_id, station_id)
-  run_dates
-
-If you want to get more than one station per dataset, then you can use the get_bulk_results. This simply runs concurrent thread requests for ultiple stations results. The output will concatenate on the station_id dimension.
-
+If you want to get more than one station per dataset, then you can use the get_bulk_results. This simply runs concurrent thread requests for multiple stations results. The output will concatenate on the station_id dimension.
 
 .. ipython:: python
 
@@ -133,6 +125,13 @@ If you want to get more than one station per dataset, then you can use the get_b
 
   results = t1.get_bulk_results(dataset_id, station_ids, remove_height=True, output='Dataset')
   results
+
+If a run_date is not passed to the get_results method, then the latest run date will be returned. If you'd like to list all the run dates and to choose which run date you'd like to pass to the get_results or get_bulk_results methods, then you can use the get_run_dates method.
+
+.. ipython:: python
+
+  run_dates = t1.get_run_dates(dataset_id, station_id)
+  run_dates
 
 
 Tethys web API

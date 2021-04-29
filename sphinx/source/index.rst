@@ -4,7 +4,7 @@ This Python package contains a class for reading geospatial time series data sto
 
 This documentation is currently under active development. A detailed description of the data model and structure will come soon.
 
-The package dependencies are: zstandard, pandas, xarray, scipy, boto3, orjson, and requests.
+The package dependencies are: zstandard, pandas, xarray, scipy, boto3, orjson, requests, and shapely.
 
 The GitHub repository is found `here <https://github.com/tethys-ts/tethysts>`_.
 
