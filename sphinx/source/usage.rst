@@ -124,6 +124,17 @@ If a run_date is not passed to the get_results method, then the latest run date 
   run_dates = t1.get_run_dates(dataset_id, station_id)
   run_dates
 
+If you want to get more than one station per dataset, then you can use the get_bulk_results. This simply runs concurrent thread requests for ultiple stations results. The output will concatenate on the station_id dimension.
+
+
+.. ipython:: python
+
+  station_ids = [station_id, 'fe9a63fae6f7fe58474bb3c0']
+
+  results = t1.get_bulk_results(dataset_id, station_ids, remove_height=True, output='Dataset')
+  results
+
+
 Tethys web API
 --------------
 The `Tethys web API <https://api.tethys-ts.xyz/docs>`_ uses all of the same function names and associated input parameters as the Python package. But in most cases, users should use the Python package instead of the web API as it will be faster, more flexible, and won't put load on the VM running the web API.
