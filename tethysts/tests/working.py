@@ -33,7 +33,7 @@ da2.attrs = {}
 da2.name = 'altitude'
 
 # da2.encoding = {'dtype': 'int32', '_FillValue': -9999, 'scale_factor': 0.1}
-da2.encoding = {'dtype': 'int16', '_FillValue': -9999, 'scale_factor': 1}
+# da2.encoding = {'dtype': 'int16', '_FillValue': -9999, 'scale_factor': 1}
 # da2.encoding = {'dtype': 'int16', '_FillValue': -9999, 'scale_factor': 0.1}
 da2.encoding = {}
 
@@ -46,75 +46,93 @@ ds1 = ds1.expand_dims('time')
 da3 = ds1.altitude
 arr = da3
 
-nc1 = tu.write_pkl_zstd(ds1.to_netcdf())
-len(nc1)
+# nc1 = tu.write_pkl_zstd(ds1.to_netcdf())
+# len(nc1)
 
-nc2 = xr.load_dataset(tu.read_pkl_zstd(nc1))
+# nc2 = xr.load_dataset(tu.read_pkl_zstd(nc1))
 
-ar1 = np.array_split(da2, [100, 100])
+# ar1 = np.array_split(da2, [100, 100])
 
-ar1 = da2.values
+# ar1 = da2.values
 
-ar2 = np.array_split(ar1, [100, 100], axis=1)
+# ar2 = np.array_split(ar1, [100, 100], axis=1)
 
 
-def split_grid(arr, lon_size, lat_size, lon_name='x', lat_name='y', data_name='altitude'):
+def split_grid(arr, x_size, y_size, x_name='x', y_name='y'):
     """
+    Function to split an n-dimensional dataset along the x and y dimensions.
 
+    Parameters
+    ----------
+    arr : DataArray
+        An xarray DataArray with at least x and y dimensions. It can have any number of dimensions, though it probably does not make much sense to have greater than 4 dimensions.
+    x_size : int
+        The size or length of the smaller grids in the x dimension.
+    y_size : int
+        The size or length of the smaller grids in the y dimension.
+    x_name : str
+        The x dimension name.
+    y_name : str
+        The y dimension name.
+
+    Returns
+    -------
+    List of DataArrays
+        The result contains none of the original attributes.
     """
+    ## Get the dimension data
     dims = arr.dims
-    lon_index = dims.index(lon_name)
-    lat_index = dims.index(lat_name)
+    x_index = dims.index(x_name)
+    y_index = dims.index(y_name)
+    data_name = arr.name
 
     arr_shape = arr.shape
 
-    m = arr_shape[lon_index]
-    n = arr_shape[lat_index]
+    m = arr_shape[x_index]
+    n = arr_shape[y_index]
     dtype = arr.dtype
 
-    ## Build the new even array to be queried
-    lat_diff = arr[lat_name].diff(lat_name, 1).median().values
-    lon_diff = arr[lon_name].diff(lon_name, 1).median().values
+    ## Build the new regular array to be queried
+    y_diff = arr[y_name].diff(y_name, 1).median().values
+    x_diff = arr[x_name].diff(x_name, 1).median().values
 
-    bpr = ((m-1)//lon_size + 1) # blocks per lon
-    bpc = ((n-1)//lat_size + 1) # blocks per lat
-    M = lon_size * bpr
-    N = lat_size * bpc
+    bpx = ((m-1)//x_size + 1) # blocks per x
+    bpy = ((n-1)//y_size + 1) # blocks per y
+    M = x_size * bpx
+    N = y_size * bpy
 
-    lon_lat = list(arr_shape)
-    lon_lat[lon_index] = M
-    lon_lat[lat_index] = N
+    x_y = list(arr_shape)
+    x_y[x_index] = M
+    x_y[y_index] = N
 
     sel1 = tuple(slice(0, s) for s in arr_shape)
 
-    A = np.nan * np.ones(lon_lat)
+    A = np.nan * np.ones(x_y)
     A[sel1] = arr
 
-    # Lon array
-    lon_start = arr[lon_name][0].values
-    lon_int = M * lon_diff
-    lon_end = lon_start + lon_int
-    lons = np.arange(lon_start, lon_end, lon_diff)
+    # x array
+    x_start = arr[x_name][0].values
+    x_int = M * x_diff
+    x_end = x_start + x_int
+    xs = np.arange(x_start, x_end, x_diff)
 
-    # Lat array
-    lat_start = arr[lat_name][0].values
-    lat_int = M * lat_diff
-    lat_end = lat_start + lat_int
-    lats = np.arange(lat_start, lat_end, lat_diff)
+    # y array
+    y_start = arr[y_name][0].values
+    y_int = M * y_diff
+    y_end = y_start + y_int
+    ys = np.arange(y_start, y_end, y_diff)
 
     # Coords
     coords = []
     new_dims = []
     for d in dims:
-        if d == lon_name:
-            c = lons
-            name = 'lon'
-        elif d == lat_name:
-            c = lats
-            name = 'lat'
+        name = d
+        if d == x_name:
+            c = xs
+        elif d == y_name:
+            c = ys
         else:
             c = arr[d]
-            name = d
         coords.extend([c])
         new_dims.extend([name])
 
@@ -122,26 +140,26 @@ def split_grid(arr, lon_size, lat_size, lon_name='x', lat_name='y', data_name='a
     A1 = xr.DataArray(A, coords=coords, dims=new_dims, name=data_name)
 
     block_list = []
-    previous_lon = 0
-    for lon_block in range(bpc):
-        previous_lon = lon_block * lon_size
-        previous_lat = 0
-        for lat_block in range(bpr):
-            previous_lat = lat_block * lat_size
-            lon_slice = slice(previous_lon, previous_lon+lon_size)
-            lat_slice = slice(previous_lat, previous_lat+lat_size)
+    previous_x = 0
+    for x_block in range(bpy):
+        previous_x = x_block * x_size
+        previous_y = 0
+        for y_block in range(bpx):
+            previous_y = y_block * y_size
+            x_slice = slice(previous_x, previous_x+x_size)
+            y_slice = slice(previous_y, previous_y+y_size)
 
             sel2 = list(sel1)
-            sel2[lon_index] = lon_slice
-            sel2[lat_index] = lat_slice
+            sel2[x_index] = x_slice
+            sel2[y_index] = y_slice
 
             block = A1[tuple(sel2)]
 
-            # remove nan lats and nan lons
-            # nan_lat = np.all(np.isnan(block), axis=lat_index)
-            block = block.dropna('lat', 'all')
-            # nan_lon = np.all(np.isnan(block), axis=lon_index)
-            block = block.dropna('lon', 'all')
+            # remove nan ys and nan xs
+            # nan_y = np.all(np.isnan(block), axis=y_index)
+            block = block.dropna(y_name, 'all')
+            # nan_x = np.all(np.isnan(block), axis=x_index)
+            block = block.dropna(x_name, 'all')
 
             ## append
             if block.size:
@@ -150,39 +168,61 @@ def split_grid(arr, lon_size, lat_size, lon_name='x', lat_name='y', data_name='a
     return block_list
 
 
-def determine_array_size(arr, starting_lon_size=100, starting_lat_size=100, increment=100, min_size=800, max_size=1100):
+def determine_array_size(arr, starting_x_size=100, starting_y_size=100, increment=100, min_size=800, max_size=1100, x_name='x', y_name='y'):
     """
-    Function to split a gridded DataArray into many smaller gridded DataArrays.
+    Function to determine the appropriate grid size for splitting.
 
+    Parameters
+    ----------
+    arr : DataArray
+        An xarray DataArray with at least x and y dimensions. It can have any number of dimensions, though it probably does not make much sense to have greater than 4 dimensions.
+    starting_x_size : int
+        The initial size or length of the smaller grids in the x dimension.
+    starting_y_size : int
+        The initial size or length of the smaller grids in the y dimension.
+    increment : int
+        The incremental grid size to be added iteratively to the starting sizes.
+    min_size : int
+        The minimum acceptable object size in KB.
+    max_size : int
+        The maximum acceptable object size in KB.
+    x_name : str
+        The x dimension name.
+    y_name : str
+        The y dimension name.
+
+    Returns
+    -------
+    dict
+        Of the optimised grid size results.
     """
     max_obj_size = 0
-
-    lon_size = starting_lon_size
-    lat_size = starting_lat_size
+    x_size = starting_x_size
+    y_size = starting_y_size
 
     while True:
-        block_list = split_grid(arr, lon_size=lon_size, lat_size=lat_size)
+        block_list = split_grid(arr, x_size=x_size, y_size=y_size, x_name=x_name, y_name=y_name)
         obj_sizes = [len(tu.write_pkl_zstd(nc.to_netcdf())) for nc in block_list]
         max_obj_size = max(obj_sizes)
 
         if max_obj_size < min_size*1000:
-            lon_size = lon_size + increment
-            lat_size = lat_size + increment
+            x_size = x_size + increment
+            y_size = y_size + increment
         else:
             break
 
     if max_obj_size > max_size*1000:
-        print(str(max_obj_size))
+        print('max_object_size:', str(max_obj_size))
         raise ValueError('max object size is greater than the allotted size. Reduce the increment value and start again.')
 
-    obj_dict = {'lon_size': lon_size, 'lat_size': lat_size, 'max_obj_size': max_obj_size, 'min_obj_size': min(obj_sizes)}
+    obj_dict = {'x_size': x_size, 'y_size': y_size, 'max_obj_size': max_obj_size, 'min_obj_size': min(obj_sizes)}
 
     return obj_dict
 
 
-obj_dict = determine_array_size(da2, 600, 600, max_size=1100000)
+obj_dict = determine_array_size(da3, 600, 600, max_size=1100000)
 
-block_list = split_grid(da3, 800, 800)
+block_list = split_grid(da3, obj_dict['x_size'], obj_dict['y_size'])
 
 obj_sizes = [len(tu.write_pkl_zstd(nc.to_netcdf())) for nc in block_list]
 
