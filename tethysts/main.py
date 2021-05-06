@@ -12,7 +12,8 @@ import orjson
 from datetime import datetime
 import copy
 from multiprocessing.pool import ThreadPool
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3
+# from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3
 from shapely.geometry import Point, Polygon, shape
 from typing import Optional, List, Any, Union
 from enum import Enum
@@ -264,7 +265,7 @@ class Tethys(object):
                     modified_date: Union[str, pd.Timestamp, datetime, None] = None,
                     quality_code: Optional[bool] = False,
                     run_date: Union[str, pd.Timestamp, datetime, None] = None,
-                    remove_height: Optional[bool] = False,
+                    squeeze_dims: Optional[bool] = False,
                     output: str = 'Dataset'):
         """
         Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
@@ -295,8 +296,8 @@ class Tethys(object):
             Should the quality codes be returned if they exist?
         run_date : str or Timestamp
             The run_date of the results to be returned. Defaults to None which will return the last run date.
-        remove_height : bool
-            Should the height dimension be removed from the output?
+        squeeze_dims : bool
+            Should all dimensions with a length of one be removed from the parameter's dimensions?
         output : str
             Output format of the results. Options are:
                 Dataset - return the entire contents of the netcdf file as an xarray Dataset,
@@ -340,113 +341,21 @@ class Tethys(object):
         ts_obj = get_object_s3(obj_key.iloc[0], remote['connection_config'], remote['bucket'], 'zstd')
         xr3 = xr.open_dataset(ts_obj)
 
-        ## Filters
-        ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date, remove_height)
+        ## Convert to new version
+        attrs = xr3.attrs.copy()
+        if 'version' not in attrs:
+            xr3 = convert_results_v2_to_v3(xr3)
 
-        if not 'station_id' in list(ts_xr1.coords):
-            ts_xr1 = ts_xr1.expand_dims('station_id').set_coords('station_id')
+        ## Filters
+        ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date)
+
+        # if not 'station_id' in list(ts_xr1.coords):
+        #     ts_xr1 = ts_xr1.expand_dims('station_id').set_coords('station_id')
 
         ## Output
-        output1 = process_results_output(ts_xr1, parameter, modified_date, quality_code, output)
+        output1 = process_results_output(ts_xr1, parameter, modified_date, quality_code, output, squeeze_dims)
 
         return output1
-
-
-    # def get_nearest_results(self,
-    #                 dataset_id: str,
-    #                 geometry: Optional[dict] = None,
-    #                 lat: Optional[float] = None,
-    #                 lon: Optional[float] = None,
-    #                 from_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                 to_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                 from_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                 to_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                 modified_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                 quality_code: Optional[bool] = False,
-    #                 run_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                 remove_height: Optional[bool] = False,
-    #                 output: str = 'Dataset'):
-    #     """
-    #     Function to query the time series data given a specific dataset_id and 2D point. A nearest neighbor query will be performed to find the single nearest station to the input point. Multiple optional outputs.
-
-    #     Parameters
-    #     ----------
-    #     dataset_id : str
-    #         The dataset_id of the dataset.
-    #     geometry : dict or None
-    #         A geometry in GeoJSON format. Can be either a point or a polygon. If it's a point, then the method will perform a nearest neighbor query and return one station.
-    #     lat : float or None
-    #         Instead of using the geometry parameter, optionally use lat and lon for the spatial queries. Both lat and lon must be passed for the spatial queries and will override the geometry parameter. If only lat and lon are passed, then the method performs a nearest neighbor query.
-    #     lon : float or None
-    #         See lat description.
-    #     from_date : str, Timestamp, datetime, or None
-    #         The start date of the selection.
-    #     to_date : str, Timestamp, datetime, or None
-    #         The end date of the selection.
-    #     from_mod_date : str, Timestamp, datetime, or None
-    #         Only return data post the defined modified date.
-    #     to_mod_date : str, Timestamp, datetime, or None
-    #         Only return data prior to the defined modified date.
-    #     modified_date : bool
-    #         Should the modified dates be returned if they exist?
-    #     quality_code : bool
-    #         Should the quality codes be returned if they exist?
-    #     run_date : str or Timestamp
-    #         The run_date of the results to be returned. Defaults to None which will return the last run date.
-    #     remove_height : bool
-    #         Should the height dimension be removed from the output?
-    #     output : str
-    #         Output format of the results. Options are:
-    #             Dataset - return the entire contents of the netcdf file as an xarray Dataset,
-    #             DataArray - return the requested dataset parameter as an xarray DataArray,
-    #             Dict - return a dictionary of results from the DataArray,
-    #             json - return a json str of the Dict.
-
-    #     Returns
-    #     -------
-    #     Whatever the output was set to.
-    #     """
-    #     ## Get parameters
-    #     dataset = self._datasets[dataset_id]
-    #     parameter = dataset['parameter']
-    #     remote = self._remotes[dataset_id]
-
-    #     ## Get all stations
-    #     if dataset_id not in self._stations:
-    #         stns = self.get_stations(dataset_id)
-
-    #     stn_dict = self._stations[dataset_id]
-
-    #     ## Spatial query
-    #     # Checks
-    #     if isinstance(geometry, dict):
-    #         geom_type = geometry['type']
-    #     else:
-    #         geom_type = None
-
-    #     if not ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
-    #         raise ValueError('geometry or a combination of lat and lon must be passed.')
-
-    #     # Run the spatial query
-    #     station_id = spatial_query(stn_dict, geometry, lat, lon)[0]
-
-    #     ## Get object key
-    #     obj_key = self._get_results_obj_key_s3(dataset_id, station_id, run_date)
-
-    #     ## Get results
-    #     ts_obj = get_object_s3(obj_key.iloc[0], remote['connection_config'], remote['bucket'], 'zstd')
-    #     xr3 = xr.open_dataset(ts_obj)
-
-    #     ## Filters
-    #     ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date, remove_height)
-
-    #     if not 'station_id' in list(ts_xr1.coords):
-    #         ts_xr1 = ts_xr1.expand_dims('station_id').set_coords('station_id')
-
-    #     ## Output
-    #     output1 = process_results_output(ts_xr1, parameter, modified_date, quality_code, output)
-
-    #     return output1
 
 
     def get_bulk_results(self,
@@ -456,10 +365,10 @@ class Tethys(object):
                          to_date: Union[str, pd.Timestamp, datetime, None] = None,
                          from_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
                          to_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
-                         modified_date: Union[str, pd.Timestamp, datetime, None] = None,
+                         modified_date: Optional[bool] = False,
                          quality_code: Optional[bool] = False,
                          run_date: Union[str, pd.Timestamp, datetime, None] = None,
-                         remove_height: Optional[bool] = False,
+                         squeeze_dims: Optional[bool] = False,
                          output: str = 'Dataset',
                          threads: int = 30):
         """
@@ -485,8 +394,8 @@ class Tethys(object):
             Should the quality codes be returned if they exist?
         run_date : str or Timestamp
             The run_date of the results to be returned. Defaults to None which will return the last run date.
-        remove_height : bool
-            Should the height dimension be removed from the output?
+        squeeze_dims : bool
+            Should all dimensions with a length of one be removed from the parameter's dimensions?
         output : str
             Output format of the results. Options are:
                 Dataset - return the entire contents of the netcdf file as an xarray Dataset,
@@ -504,15 +413,18 @@ class Tethys(object):
         dataset = self._datasets[dataset_id]
         parameter = dataset['parameter']
 
-        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, remove_height, 'Dataset') for s in station_ids]
+        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, False, 'Dataset') for s in station_ids]
 
         output1 = ThreadPool(threads).starmap(self.get_results, lister)
-        output2 = [d if 'station_id' in list(d.coords) else d.expand_dims('station_id').set_coords('station_id') for d in output1]
+        # output2 = [d if 'station_id' in list(d.coords) else d.expand_dims('station_id').set_coords('station_id') for d in output1]
 
-        xr_ds1 = xr.concat(output2, 'station_id')
+        if 'geometry' in output1[0]:
+            xr_ds1 = xr.combine_nested(output1, 'geometry')
+        else:
+            xr_ds1 = xr.combine_nested(output1, ['lon', 'lat'])
 
         ## Output
-        output3 = process_results_output(xr_ds1, parameter, modified_date, quality_code, output)
+        output3 = process_results_output(xr_ds1, parameter, modified_date, quality_code, output, squeeze_dims)
 
         return output3
 

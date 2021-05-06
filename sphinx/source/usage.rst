@@ -13,13 +13,13 @@ The datasets are organised in three layers:
 Dataset metadata
 ----------------
 You first need to figure out what datasets exist in each bucket.
-Let's say you've got a bucket called fire-emergency-nz and you've been told that the connection_config is https://b2.tethys-ts.xyz:
+Let's say you've got a bucket called ecan-env-monitoring and you've been told that the connection_config is https://b2.tethys-ts.xyz:
 
 .. code:: python
 
     from tethysts import Tethys
 
-    remote = {'connection_config': 'https://b2.tethys-ts.xyz', 'bucket': 'fire-emergency-nz'}
+    remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}
 
 
 .. ipython:: python
@@ -28,9 +28,9 @@ Let's say you've got a bucket called fire-emergency-nz and you've been told that
    from tethysts import Tethys
    from pprint import pprint as print
 
-   remote = {'connection_config': 'https://b2.tethys-ts.xyz', 'bucket': 'fire-emergency-nz'}
-   dataset_id = 'dddb02cd5cb7ae191311ab19'
-   station_id = 'fedeb59e6c7f47597a7d47c7'
+   remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}
+   dataset_id = 'b5d84aa773de2a747079c127'
+   station_id = '4db28a9db0cb036507490887'
 
 
 Initialise the class to get the metadata about the available datasets:
@@ -39,7 +39,9 @@ Initialise the class to get the metadata about the available datasets:
 
   t1 = Tethys([remote])
   datasets = t1.datasets
-  my_dataset = [d for d in datasets if (d['parameter'] == 'temperature') and (d['aggregation_statistic'] == 'mean')][0]
+  my_dataset = [d for d in datasets if (d['parameter'] == 'precipitation') and
+                                       (d['product_code'] == 'raw_data') and
+                                       (d['frequency_interval'] == '24H')][0]
   my_dataset
 
 In this example we only have one remote we want to check for datasets, but as you can see the initialisation takes a list of remotes (dicts). If you had more remotes, then you would just need to put them all together in a list and pass them to the Tethys class.
@@ -52,19 +54,21 @@ Alternatively, you can initialise Tethys without anything and use the get_datase
 
   t1 = Tethys()
   datasets = t1.get_datasets([remote])
-  my_dataset = [d for d in datasets if (d['parameter'] == 'temperature') and (d['aggregation_statistic'] == 'mean')][0]
+  my_dataset = [d for d in datasets if (d['parameter'] == 'precipitation') and
+                                       (d['product_code'] == 'raw_data') and
+                                       (d['frequency_interval'] == '24H')][0]
   my_dataset
 
 Stations
 --------
-Once you've decided which dataset you want (i.e. mean hourly air temperature), write down the dataset_id contained within the associated dictionary and pass it to the next method: get_stations.
+Once you've decided which dataset you want (i.e. cumulative 24 hour precipitation), write down the dataset_id contained within the associated dictionary and pass it to the next method: get_stations.
 
 .. ipython:: python
 
-  dataset_id = 'dddb02cd5cb7ae191311ab19'
+  dataset_id = 'b5d84aa773de2a747079c127'
 
   stations = t1.get_stations(dataset_id)
-  my_station = [s for s in stations if (s['ref'] == 'waeranga')][0]
+  my_station = [s for s in stations if (s['name'] == "Waimakariri at Arthur's Pass")][0]
   my_station
 
 Again, the stations object is a list of dictionaries. Most of the data in each dictionary should be self-explanatory.
@@ -73,8 +77,8 @@ If you've got geographic coordinates as a GeoJSON point or a combination of a la
 
 .. ipython:: python
 
-  dataset_id = 'dddb02cd5cb7ae191311ab19'
-  geometry = {'type': 'Point', 'coordinates': [175.3, -37.3]}
+  dataset_id = 'b5d84aa773de2a747079c127'
+  geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
 
   my_station = t1.get_stations(dataset_id, geometry=geometry)
   my_station[0]
@@ -83,9 +87,9 @@ To get a bunch of stations within a specified area, you can pass a polygon GeoJS
 
 .. ipython:: python
 
-  dataset_id = 'dddb02cd5cb7ae191311ab19'
-  lon = 175.3
-  lat = -37.3
+  dataset_id = 'b5d84aa773de2a747079c127'
+  lon = 172.0
+  lat = -42.8
   distance = 0.2
 
   my_stations = t1.get_stations(dataset_id, lat=lat, lon=lon, distance=distance)
@@ -100,30 +104,30 @@ The get_results method has many input options. Take a look at the reference page
 
 .. ipython:: python
 
-  station_id = 'fedeb59e6c7f47597a7d47c7'
+  station_id = '4db28a9db0cb036507490887'
 
-  results = t1.get_results(dataset_id, station_id, remove_height=True, output='Dataset')
+  results = t1.get_results(dataset_id, station_id, output='Dataset')
   results
 
-Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the previous dataset and station data. Other options include an xarray DataArray, dictionary, and JSON. The results are stored/structured according to CF conventions v1.8.
+Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the previous dataset and station data. Other options include an xarray DataArray, dictionary, and JSON. The results are indexed by geometry, height, and time. The geometry dimension is a hexadecimal encoded Well-Known Binary (WKB) representation of the geometry. This was used to be flexible on the geometry type (i.e. points, lines, or polygons) and the WKB ensures that the geometry is stored accurately. This is a standard format by the Open Geospatial Consortium (OGC) and can be parsed by many programs including shapely, PostGIS, etc. Using WKB in a geometry dimension does not follow CF conventions. This was a trade off between flexibility, simplicity, and following standards. I picked flexibility and simplicity.
 
-Similar to the get_stations spatial query, the get_results method has a built-in nearest neighbor query if you omit the station_id and pass either geometry dict or a combination of latitude and longitude.
+Similar to the get_stations spatial query, the get_results method has a built-in nearest neighbour query if you omit the station_id and pass either geometry dict or a combination of latitude and longitude.
 
 .. ipython:: python
 
-  station_id = 'fedeb59e6c7f47597a7d47c7'
-  geometry = {'type': 'Point', 'coordinates': [175.3, -37.3]}
+  station_id = '4db28a9db0cb036507490887'
+  geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
 
-  results = t1.get_results(dataset_id, geometry=geometry, remove_height=True, output='Dataset')
+  results = t1.get_results(dataset_id, geometry=geometry, squeeze_dims=True, output='Dataset')
   results
 
-If you want to get more than one station per dataset, then you can use the get_bulk_results. This simply runs concurrent thread requests for multiple stations results. The output will concatenate on the station_id dimension.
+If you want to get more than one station per dataset, then you can use the get_bulk_results. This simply runs concurrent thread requests for multiple stations results. The output will concatenate on the geometry dimension.
 
 .. ipython:: python
 
-  station_ids = [station_id, 'fe9a63fae6f7fe58474bb3c0']
+  station_ids = [station_id, '474f75b4de127caca088620a']
 
-  results = t1.get_bulk_results(dataset_id, station_ids, remove_height=True, output='Dataset')
+  results = t1.get_bulk_results(dataset_id, station_ids, squeeze_dims=True, output='Dataset')
   results
 
 If a run_date is not passed to the get_results method, then the latest run date will be returned. If you'd like to list all the run dates and to choose which run date you'd like to pass to the get_results or get_bulk_results methods, then you can use the get_run_dates method.
