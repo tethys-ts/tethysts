@@ -241,7 +241,7 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
     return ts_obj
 
 
-def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, remove_height=False):
+def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None):
     """
 
     """
@@ -272,13 +272,10 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
         if 'modified_date' in ts_xr1:
             ts_xr1 = ts_xr1.sel(modified_date=slice(from_mod_date1, to_mod_date1))
 
-    if remove_height:
-        ts_xr1 = ts_xr1.squeeze('height').drop_vars('height')
-
     return ts_xr1
 
 
-def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray'):
+def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False):
     """
 
     """
@@ -296,6 +293,9 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
         out_param = out_param[0]
 
     ## Return
+    if squeeze_dims:
+        ts_xr = ts_xr.squeeze()
+
     if output == 'Dataset':
         return ts_xr
 
@@ -320,3 +320,37 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
         return json1
     else:
         raise ValueError("output must be one of 'Dataset', 'DataArray', 'Dict', or 'json'")
+
+
+def convert_results_v2_to_v3(data):
+    """
+    Function to convert xarray Dataset results in verion 2 structure to version 3 structure.
+    """
+    geo1 = Point(float(data['lon']), float(data['lat'])).wkb_hex
+    data2 = data.assign_coords({'geometry': geo1}).drop('virtual_station')
+    # data2['station_id'].attrs = data['station_id'].attrs
+    data2['geometry'].attrs = {'long_name': 'The hexadecimal encoding of the Well-Known Binary (WKB) geometry', 'crs_EPSG': 4326}
+    data2.attrs.update({'version': 3})
+
+    data2 = data2.expand_dims('geometry')
+
+    # vars2 = list(data2.variables)
+
+    # if 'name' in vars2:
+    #     data2 = data2.assign({'name': (('station_id'), data2['name'])})
+    #     data2['name'].attrs = data['name'].attrs
+    # if 'ref' in vars2:
+    #     data2 = data2.assign({'ref': (('station_id'), data2['ref'])})
+    #     data2['ref'].attrs = data['ref'].attrs
+
+    return data2
+
+
+
+
+
+
+
+
+
+

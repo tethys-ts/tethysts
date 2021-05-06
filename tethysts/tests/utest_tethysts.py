@@ -37,8 +37,9 @@ remote = remotes_list[-1]
 # station_ids = [station_id, '5d06c5a8065a26b51c19b241']
 dataset_id='361ce2acd56b13da82390a69'
 station_id='00128a218015a069cb94d360'
-# dataset_id='ad3156ce8245f725a5a0cda8'
-# station_id='6b5dc8c9ec394b2c4167f6b8'
+# dataset_id='320d6836250169a5f7b78163'
+# station_id='7df0d7fe8c6fcd06c50d73a6'
+station_id = 'fef86ad238409cb3974319ff'
 #
 #
 self = Tethys([remote])
@@ -46,7 +47,7 @@ self = Tethys(remotes_list)
 #
 stn_list1 = self.get_stations(dataset_id)
 # run_dates = self.get_run_dates(dataset_id, station_id)
-data1 = self.get_results(dataset_id, station_id, remove_height=True, output='Dataset')
+data1 = self.get_results(dataset_id, station_id, output='Dataset')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, remove_height=True, output='DataArray')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, remove_height=True, output='DataArray')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, output='Dict')
@@ -65,7 +66,7 @@ stn_list2 = self.get_stations(dataset_id, query_geometry)
 stn_list2 = self.get_stations(dataset_id, lat=-43.1, lon=171.1)
 data2 = self.get_nearest_results(dataset_id, query_geometry, remove_height=True, output='Dataset')
 
-stn = [s for s in stn_list1 if s['ref'] == '1071103']
+stn = [s for s in stn_list1 if s['station_id'] == station_id]
 
 
 geom0 = [s['geometry'] for s in stn_list1]
