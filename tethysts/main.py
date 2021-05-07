@@ -421,7 +421,7 @@ class Tethys(object):
         if 'geometry' in output1[0]:
             xr_ds1 = xr.combine_nested(output1, 'geometry')
         else:
-            xr_ds1 = xr.combine_nested(output1, ['lon', 'lat'])
+            xr_ds1 = xr.combine_by_coords(output1, data_vars='minimal')
 
         ## Output
         output3 = process_results_output(xr_ds1, parameter, modified_date, quality_code, output, squeeze_dims)
