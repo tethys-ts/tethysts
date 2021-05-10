@@ -26,6 +26,7 @@ remotes_list = param['remotes']
 ### Testing
 
 # remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
@@ -39,7 +40,11 @@ dataset_id='361ce2acd56b13da82390a69'
 station_id='00128a218015a069cb94d360'
 # dataset_id='320d6836250169a5f7b78163'
 # station_id='7df0d7fe8c6fcd06c50d73a6'
-station_id = 'fef86ad238409cb3974319ff'
+station_id = 'de7cfd749e24a6b78c2281fb'
+station_ids = [station_id, 'de7cfd749e24a6b78c2281fb']
+dataset_id = '4690821a39b3fb65c197a540'
+station_id = '78b7a3d3f61cf33e681490c1'
+station_ids = [station_id, '9f3ee54af239b845241f8f13']
 #
 #
 self = Tethys([remote])
@@ -54,17 +59,17 @@ data1 = self.get_results(dataset_id, station_id, output='Dataset')
 # data1 = self.get_results(dataset_id, station_id, output='Dict')
 # data1 = self.get_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
 
-# data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset')
+data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset')
 
 # dataset_id = 'f4cfb5a362707785dd39ff85'
 # station_id = 'ff4213c61878e098e07df513'
 
-query_geometry = {'type': 'Point', 'coordinates': [171.05, -43.1]}
+query_geometry = {'type': 'Point', 'coordinates': [171.043868, -43.106372]}
 geom_query = shape(query_geometry).buffer(0.1)
 
 stn_list2 = self.get_stations(dataset_id, query_geometry)
 stn_list2 = self.get_stations(dataset_id, lat=-43.1, lon=171.1)
-data2 = self.get_nearest_results(dataset_id, query_geometry, remove_height=True, output='Dataset')
+data2 = self.get_results(dataset_id, geometry=query_geometry, squeeze_dims=True, output='Dataset')
 
 stn = [s for s in stn_list1 if s['station_id'] == station_id]
 

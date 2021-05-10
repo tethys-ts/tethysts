@@ -242,12 +242,13 @@ ds1 = [da.to_dataset() for da in block_list]
 ds2 = xr.combine_by_coords(ds1)
 
 
+b1 = 'l49f0sje'.encode('utf-8')
 
+h1 = b1.hex()
 
+p1 = Point(4, 89)
 
-
-
-
+b2 = p1.wkb_hex
 
 
 
