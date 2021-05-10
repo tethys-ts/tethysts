@@ -2,6 +2,8 @@
 
 
 """
+import math
+import numpy as np
 import requests
 import xarray as xr
 import pandas as pd
@@ -17,6 +19,7 @@ from time import sleep
 from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
+from scipy import spatial
 
 pd.options.display.max_columns = 10
 
@@ -36,6 +39,15 @@ b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'
 
 ##############################################
 ### Helper functions
+
+
+def cartesian_product(*arrays):
+    la = len(arrays)
+    dtype = np.result_type(*arrays)
+    arr = np.empty([len(a) for a in arrays] + [la], dtype=dtype)
+    for i, a in enumerate(np.ix_(*arrays)):
+        arr[...,i] = a
+    return arr.reshape(-1, la)
 
 
 def get_nearest_station(stns, geom_query):
@@ -104,6 +116,38 @@ def spatial_query(stns: dict,
 
     return stn_ids
 
+
+def get_nearest_from_extent(data,
+                            query_geometry: Optional[dict] = None,
+                            lat: Optional[float] = None,
+                            lon: Optional[float] = None):
+    """
+
+    """
+    ## Prep the query point
+    if isinstance(lat, float) and isinstance(lon, float):
+        geom_query = Point(lon, lat)
+    elif isinstance(query_geometry, dict):
+        geom_query = shape(query_geometry)
+        if not isinstance(geom_query, Point):
+            raise ValueError('query_geometry must be a Point.')
+    else:
+        raise ValueError('query_geometry or lat/lon must be passed as a Point.')
+
+    ## Prep the input data
+    if 'geometry' in data:
+        raise NotImplementedError('Need to implement geometry blocks nearest query.')
+    else:
+        lats = data['lat'].values
+        lons = data['lon'].values
+        xy = cartesian_product(lons, lats)
+        kdtree = spatial.cKDTree(xy)
+        dist, index = kdtree.query(np.array(geom_query))
+        lon_n, lat_n = xy[index]
+
+    data1 = data.sel(lon=[lon_n], lat=[lat_n])
+
+    return data1
 
 
 def read_pkl_zstd(obj, unpickle=False):
@@ -344,13 +388,3 @@ def convert_results_v2_to_v3(data):
     #     data2['ref'].attrs = data['ref'].attrs
 
     return data2
-
-
-
-
-
-
-
-
-
-
