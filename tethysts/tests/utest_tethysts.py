@@ -51,6 +51,7 @@ self = Tethys([remote])
 self = Tethys(remotes_list)
 #
 stn_list1 = self.get_stations(dataset_id)
+stn_list1 = self.get_stations(dataset_id, results_object_keys=True)
 # run_dates = self.get_run_dates(dataset_id, station_id)
 data1 = self.get_results(dataset_id, station_id, output='Dataset')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, remove_height=True, output='DataArray')
