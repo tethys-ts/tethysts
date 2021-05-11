@@ -12,7 +12,7 @@ import orjson
 from datetime import datetime
 import copy
 from multiprocessing.pool import ThreadPool
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3
 from shapely.geometry import Point, Polygon, shape
 from typing import Optional, List, Any, Union
@@ -63,6 +63,7 @@ class Tethys(object):
         setattr(self, '_remotes', {})
         setattr(self, '_stations', {})
         setattr(self, '_key_patterns', key_patterns)
+        setattr(self, '_results', {})
 
         if isinstance(remotes_list, list):
             datasets = self.get_datasets(remotes_list)
@@ -249,7 +250,7 @@ class Tethys(object):
         else:
             obj_key = last_key
 
-        return obj_key
+        return obj_key.iloc[0]
 
 
     def get_results(self,
@@ -266,7 +267,8 @@ class Tethys(object):
                     quality_code: Optional[bool] = False,
                     run_date: Union[str, pd.Timestamp, datetime, None] = None,
                     squeeze_dims: Optional[bool] = False,
-                    output: str = 'Dataset'):
+                    output: str = 'Dataset',
+                    cache: Optional[str] = None):
         """
         Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
 
@@ -304,6 +306,8 @@ class Tethys(object):
                 DataArray - return the requested dataset parameter as an xarray DataArray,
                 Dict - return a dictionary of results from the DataArray,
                 json - return a json str of the Dict.
+        cache : str or None
+            How the results should be cached. Current options are None (which does not cache) and 'memory' (which caches the results in the Tethys object in memory).
 
         Returns
         -------
@@ -338,8 +342,23 @@ class Tethys(object):
         obj_key = self._get_results_obj_key_s3(dataset_id, stn_id, run_date)
 
         ## Get results
-        ts_obj = get_object_s3(obj_key.iloc[0], remote['connection_config'], remote['bucket'], 'zstd')
-        xr3 = xr.open_dataset(ts_obj)
+        if obj_key in self._results:
+            ts_obj = self._results[obj_key]
+        else:
+            ts_obj = get_object_s3(obj_key, remote['connection_config'], remote['bucket'])
+
+        # cache results if requested
+        if cache == 'memory':
+            if obj_key in self._results:
+                new_len = len(ts_obj)
+                old_len = len(self._results[obj_key])
+                if new_len != old_len:
+                    self._results[obj_key] = ts_obj
+            else:
+                self._results[obj_key] = ts_obj
+
+        # Open results
+        xr3 = xr.open_dataset(read_pkl_zstd(ts_obj))
 
         ## Convert to new version
         attrs = xr3.attrs.copy()
@@ -374,6 +393,7 @@ class Tethys(object):
                          run_date: Union[str, pd.Timestamp, datetime, None] = None,
                          squeeze_dims: Optional[bool] = False,
                          output: str = 'Dataset',
+                         cache: Optional[str] = None,
                          threads: int = 30):
         """
         Function to bulk query the time series data given a specific dataset_id and a list of station_ids. The output will be specified by the output parameter and will be concatenated along the station_id dimension.
@@ -406,6 +426,8 @@ class Tethys(object):
                 DataArray - return the requested dataset parameter as an xarray DataArray,
                 Dict - return a dictionary of results from the DataArray,
                 json - return a json str of the Dict.
+        cache : str or None
+            How the results should be cached. Current options are None (which does not cache) and 'memory' (which caches the results in the Tethys object in memory).
         threads : int
             The number of simultaneous downloads.
 
@@ -417,7 +439,7 @@ class Tethys(object):
         dataset = self._datasets[dataset_id]
         parameter = dataset['parameter']
 
-        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, False, 'Dataset') for s in station_ids]
+        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, False, 'Dataset', cache) for s in station_ids]
 
         output1 = ThreadPool(threads).starmap(self.get_results, lister)
         # output2 = [d if 'station_id' in list(d.coords) else d.expand_dims('station_id').set_coords('station_id') for d in output1]
