@@ -34,6 +34,7 @@ remote = remotes_list[-1]
 # dataset_id = 'dddb02cd5cb7ae191311ab19'
 # station_id = 'fedeb59e6c7f47597a7d47c7'
 # station_id = 'fe9a63fae6f7fe58474bb3c0'
+# station_id2 = 'fe9a63fae6f7fe58474bb3c0'
 # station_id = '6b75a7fb1453ef94148bda19'
 # station_ids = [station_id, '5d06c5a8065a26b51c19b241']
 dataset_id='361ce2acd56b13da82390a69'
@@ -60,6 +61,10 @@ data1 = self.get_results(dataset_id, station_id, output='Dataset', cache='memory
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, output='Dict')
 # data1 = self.get_results(dataset_id, station_id, output='Dict')
 # data1 = self.get_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
+
+data1 = self.get_results(dataset_id, station_id, output='DataArray')
+data2 = self.get_results(dataset_id, station_id2, output='DataArray')
+
 
 data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset')
 
