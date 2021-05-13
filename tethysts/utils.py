@@ -2,7 +2,6 @@
 
 
 """
-import math
 import numpy as np
 import requests
 import xarray as xr
@@ -20,6 +19,7 @@ from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
 from scipy import spatial
+import traceback
 
 pd.options.display.max_columns = 10
 
@@ -266,7 +266,10 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
 
             elif isinstance(connection_config, str):
                 url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
-                ts_obj = requests.get(url).content
+                resp = requests.get(url)
+                resp.raise_for_status()
+
+                ts_obj = resp.content
 
             if isinstance(compression, str):
                 if compression == 'zstd':
@@ -275,6 +278,7 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
                     raise ValueError('compression option can only be zstd or None')
             break
         except:
+            print(traceback.format_exc())
             if counter1 == 0:
                 raise ValueError('Could not properly extract the object after several tries')
             else:
