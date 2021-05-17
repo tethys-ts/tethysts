@@ -351,18 +351,20 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
         return ts_xr[out_param]
 
     elif output == 'Dict':
-        darr = ts_xr[out_param]
+        # darr = ts_xr[out_param]
+        darr = ts_xr
         data_dict = darr.to_dict()
-        if 'name' in data_dict:
-            data_dict.pop('name')
+        # if 'name' in data_dict:
+        #     data_dict.pop('name')
 
         return data_dict
 
     elif output == 'json':
-        darr = ts_xr[out_param]
+        # darr = ts_xr[out_param]
+        darr = ts_xr
         data_dict = darr.to_dict()
-        if 'name' in data_dict:
-            data_dict.pop('name')
+        # if 'name' in data_dict:
+        #     data_dict.pop('name')
         json1 = orjson.dumps(data_dict)
 
         return json1

@@ -46,6 +46,9 @@ station_ids = [station_id, 'de7cfd749e24a6b78c2281fb']
 dataset_id = '4690821a39b3fb65c197a540'
 station_id = '78b7a3d3f61cf33e681490c1'
 station_ids = [station_id, '9f3ee54af239b845241f8f13']
+dataset_id = '38138ea1c3350031d1b217f6'
+station_id = 'b318207aa246e7bbbd74cb19'
+
 #
 #
 self = Tethys([remote])
