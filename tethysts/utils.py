@@ -378,7 +378,10 @@ def convert_results_v2_to_v3(data):
     Function to convert xarray Dataset results in verion 2 structure to version 3 structure.
     """
     geo1 = Point(float(data['lon']), float(data['lat'])).wkb_hex
-    data2 = data.assign_coords({'geometry': geo1}).drop('virtual_station')
+    data2 = data.assign_coords({'geometry': geo1})
+    if 'virtual_station' in data2:
+        data2 = data2.drop('virtual_station')
+
     # data2['station_id'].attrs = data['station_id'].attrs
     data2['geometry'].attrs = {'long_name': 'The hexadecimal encoding of the Well-Known Binary (WKB) geometry', 'crs_EPSG': 4326}
     data2.attrs.update({'version': 3})
