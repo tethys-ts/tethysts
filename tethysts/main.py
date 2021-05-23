@@ -4,6 +4,7 @@ Created on 2020-11-05.
 @author: Mike K
 """
 import os
+import requests
 import numpy as np
 import xarray as xr
 import pandas as pd
@@ -12,9 +13,8 @@ import orjson
 from datetime import datetime
 import copy
 from multiprocessing.pool import ThreadPool
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd
-# from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3
-from shapely.geometry import Point, Polygon, shape
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key
+# from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key
 from typing import Optional, List, Any, Union
 from enum import Enum
 
@@ -39,8 +39,9 @@ class Tethys(object):
 
     Parameters
     ----------
-    remotes_list : list of dict
-        list of dict of the S3 remotes to access. The dicts must contain:
+    remotes : list of dict or None
+        list of dict of the S3 remotes to access or None which will parse all public datasets.
+        The dicts must contain:
         bucket and connection_config.
 
         bucket : str
@@ -52,9 +53,8 @@ class Tethys(object):
     -------
     tethys object
     """
-
     ## Initial import and assignment function
-    def __init__(self, remotes_list=None):
+    def __init__(self, remotes=None):
         """
 
         """
@@ -65,20 +65,29 @@ class Tethys(object):
         setattr(self, '_key_patterns', key_patterns)
         setattr(self, '_results', {})
 
-        if isinstance(remotes_list, list):
-            datasets = self.get_datasets(remotes_list)
+        if isinstance(remotes, list):
+            datasets = self.get_datasets(remotes)
 
-        else:
-            pass
+        elif remotes is None:
+            resp = requests.get(public_remote_key)
+            resp.raise_for_status()
+
+            remotes = read_json_zstd(resp.content)
+            datasets = self.get_datasets(remotes)
+
+        elif remotes != 'pass':
+            raise ValueError('remotes must be a list of dict or None.')
+
+        pass
 
 
-    def get_datasets(self, remotes_list: List[dict], threads: int = 30):
+    def get_datasets(self, remotes: List[dict], threads: int = 30):
         """
         The function to get datasets from many remotes.
 
         Parameters
         ----------
-        remotes_list : list of dict
+        remotes : list of dict
             list of dict of the S3 remotes to access. The dicts must contain:
             bucket and connection_config.
             bucket : str
@@ -93,7 +102,8 @@ class Tethys(object):
         dict
             of datasets
         """
-        output = ThreadPool(threads).map(self.get_remote_datasets, remotes_list)
+        output = ThreadPool(threads).map(self.get_remote_datasets, remotes)
+        setattr(self, 'remotes', remotes)
 
         return self.datasets
 

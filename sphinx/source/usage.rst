@@ -37,27 +37,29 @@ Initialise the class to get the metadata about the available datasets:
 
 .. ipython:: python
 
-  t1 = Tethys([remote])
-  datasets = t1.datasets
+  ts = Tethys([remote])
+  datasets = ts.datasets
   my_dataset = [d for d in datasets if (d['parameter'] == 'precipitation') and
                                        (d['product_code'] == 'raw_data') and
-                                       (d['frequency_interval'] == '24H')][0]
+                                       (d['frequency_interval'] == '24H') and
+                                       (d['owner'] == 'Environment Canterbury')][0]
   my_dataset
 
 In this example we only have one remote we want to check for datasets, but as you can see the initialisation takes a list of remotes (dicts). If you had more remotes, then you would just need to put them all together in a list and pass them to the Tethys class.
 
-The datasets object is a list of dictionaries with a lot of metadata about each dataset. It should tell you practically all you need to know about data contained in the results (e.g. parameter, units, data licence, owner, etc).
-
-Alternatively, you can initialise Tethys without anything and use the get_datasets method to get the datasets metadata separately:
+Alternatively, from version 0.2.7 if you do not have specific remotes to pass to the Tethys object, then you can simply initialise Tethys without anything (None) and Tethys will pull down all public remotes and parse the associated dataset metadata:
 
 .. ipython:: python
 
-  t1 = Tethys()
-  datasets = t1.get_datasets([remote])
+  ts = Tethys()
+  datasets = ts.datasets
   my_dataset = [d for d in datasets if (d['parameter'] == 'precipitation') and
                                        (d['product_code'] == 'raw_data') and
-                                       (d['frequency_interval'] == '24H')][0]
+                                       (d['frequency_interval'] == '24H') and
+                                       (d['owner'] == 'Environment Canterbury')][0]
   my_dataset
+
+The datasets object is a list of dictionaries with a lot of metadata about each dataset. It should tell you practically all you need to know about data contained in the results (e.g. parameter, units, data licence, owner, etc).
 
 Stations
 --------
@@ -67,7 +69,7 @@ Once you've decided which dataset you want (i.e. cumulative 24 hour precipitatio
 
   dataset_id = 'b5d84aa773de2a747079c127'
 
-  stations = t1.get_stations(dataset_id)
+  stations = ts.get_stations(dataset_id)
   my_station = [s for s in stations if (s['name'] == "Waimakariri at Arthur's Pass")][0]
   my_station
 
@@ -80,7 +82,7 @@ If you've got geographic coordinates as a GeoJSON point or a combination of a la
   dataset_id = 'b5d84aa773de2a747079c127'
   geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
 
-  my_station = t1.get_stations(dataset_id, geometry=geometry)
+  my_station = ts.get_stations(dataset_id, geometry=geometry)
   my_station[0]
 
 To get a bunch of stations within a specified area, you can pass a polygon GeoJSON geometry or a combination of latitude, longitude, and distance (radius in decimal degrees).
@@ -92,7 +94,7 @@ To get a bunch of stations within a specified area, you can pass a polygon GeoJS
   lat = -42.8
   distance = 0.2
 
-  my_stations = t1.get_stations(dataset_id, lat=lat, lon=lon, distance=distance)
+  my_stations = ts.get_stations(dataset_id, lat=lat, lon=lon, distance=distance)
   my_stations
 
 Results
@@ -106,7 +108,7 @@ The get_results method has many input options. Take a look at the reference page
 
   station_id = '4db28a9db0cb036507490887'
 
-  results = t1.get_results(dataset_id, station_id, output='Dataset')
+  results = ts.get_results(dataset_id, station_id, output='Dataset')
   results
 
 Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the previous dataset and station data. Other options include an xarray DataArray, dictionary, and JSON. The results are indexed by geometry, height, and time. The geometry dimension is a hexadecimal encoded Well-Known Binary (WKB) representation of the geometry. This was used to be flexible on the geometry type (i.e. points, lines, or polygons) and the WKB ensures that the geometry is stored accurately. This is a standard format by the Open Geospatial Consortium (OGC) and can be parsed by many programs including shapely, PostGIS, etc. Using WKB in a geometry dimension does not follow CF conventions. This was a trade off between flexibility, simplicity, and following standards. I picked flexibility and simplicity.
@@ -118,7 +120,7 @@ Similar to the get_stations spatial query, the get_results method has a built-in
   station_id = '4db28a9db0cb036507490887'
   geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
 
-  results = t1.get_results(dataset_id, geometry=geometry, squeeze_dims=True, output='Dataset')
+  results = ts.get_results(dataset_id, geometry=geometry, squeeze_dims=True, output='Dataset')
   results
 
 If you want to get more than one station per dataset, then you can use the get_bulk_results. This simply runs concurrent thread requests for multiple stations results. The output will concatenate on the geometry dimension.
@@ -127,14 +129,14 @@ If you want to get more than one station per dataset, then you can use the get_b
 
   station_ids = [station_id, '474f75b4de127caca088620a']
 
-  results = t1.get_bulk_results(dataset_id, station_ids, squeeze_dims=True, output='Dataset')
+  results = ts.get_bulk_results(dataset_id, station_ids, squeeze_dims=True, output='Dataset')
   results
 
 If a run_date is not passed to the get_results method, then the latest run date will be returned. If you'd like to list all the run dates and to choose which run date you'd like to pass to the get_results or get_bulk_results methods, then you can use the get_run_dates method.
 
 .. ipython:: python
 
-  run_dates = t1.get_run_dates(dataset_id, station_id)
+  run_dates = ts.get_run_dates(dataset_id, station_id)
   run_dates
 
 
