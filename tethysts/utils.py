@@ -2,7 +2,6 @@
 
 
 """
-import math
 import numpy as np
 import requests
 import xarray as xr
@@ -20,6 +19,7 @@ from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
 from scipy import spatial
+import traceback
 
 pd.options.display.max_columns = 10
 
@@ -28,7 +28,7 @@ pd.options.display.max_columns = 10
 ### Reference objects
 
 key_patterns = {'results': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/results.nc.zst',
-                'results_buffer': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/results_buffer.nc.zst',
+                # 'results_buffer': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/results_buffer.nc.zst',
                 'datasets': 'tethys/v2/datasets.json.zst',
                 'stations': 'tethys/v2/{dataset_id}/stations.json.zst',
                 'station': 'tethys/v2/{dataset_id}/{station_id}/station.json.zst',
@@ -36,6 +36,7 @@ key_patterns = {'results': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/resul
                 }
 
 b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'
+public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/v2/public_remotes.json.zst'
 
 ##############################################
 ### Helper functions
@@ -266,7 +267,10 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
 
             elif isinstance(connection_config, str):
                 url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
-                ts_obj = requests.get(url).content
+                resp = requests.get(url)
+                resp.raise_for_status()
+
+                ts_obj = resp.content
 
             if isinstance(compression, str):
                 if compression == 'zstd':
@@ -275,6 +279,7 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
                     raise ValueError('compression option can only be zstd or None')
             break
         except:
+            print(traceback.format_exc())
             if counter1 == 0:
                 raise ValueError('Could not properly extract the object after several tries')
             else:
@@ -347,18 +352,20 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
         return ts_xr[out_param]
 
     elif output == 'Dict':
-        darr = ts_xr[out_param]
+        # darr = ts_xr[out_param]
+        darr = ts_xr
         data_dict = darr.to_dict()
-        if 'name' in data_dict:
-            data_dict.pop('name')
+        # if 'name' in data_dict:
+        #     data_dict.pop('name')
 
         return data_dict
 
     elif output == 'json':
-        darr = ts_xr[out_param]
+        # darr = ts_xr[out_param]
+        darr = ts_xr
         data_dict = darr.to_dict()
-        if 'name' in data_dict:
-            data_dict.pop('name')
+        # if 'name' in data_dict:
+        #     data_dict.pop('name')
         json1 = orjson.dumps(data_dict)
 
         return json1
