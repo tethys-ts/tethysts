@@ -336,7 +336,7 @@ class Tethys(object):
 
         if isinstance(station_id, str):
             stn_id = station_id
-        elif ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
+        elif ((geom_type in ['Point', 'Polygon']) or (isinstance(lat, float) and isinstance(lon, float))):
             ## Get all stations
             if dataset_id not in self._stations:
                 stns = self.get_stations(dataset_id)
