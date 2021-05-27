@@ -28,6 +28,7 @@ remotes_list = param['remotes']
 remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'es-hilltop', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'niwa-cliflo', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
@@ -56,6 +57,8 @@ station_id = 'dfb66ed0f4835161a7001d45'
 
 dataset_id = 'fb77f37b16edae3534e73ddd'
 station_id = 'fd60b5bafe19d6b243dda43d'
+
+dataset_id = 'e37f1451fcf8f9e64b66be8d'
 #
 #
 self = Tethys([remote])
@@ -93,7 +96,7 @@ stn = [s for s in stn_list1 if s['station_id'] == station_id]
 stn = [s for s in stn_list1 if 'Waiau River' in s['ref']]
 
 
-
+gwl_ds1 = [d for d in self.datasets if d['parameter'] == 'groundwater_depth']
 
 
 
