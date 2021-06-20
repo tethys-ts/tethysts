@@ -394,6 +394,9 @@ class Tethys(object):
     def get_bulk_results(self,
                          dataset_id: str,
                          station_ids: List[str],
+                         geometry: Optional[dict] = None,
+                         lat: Optional[float] = None,
+                         lon: Optional[float] = None,
                          from_date: Union[str, pd.Timestamp, datetime, None] = None,
                          to_date: Union[str, pd.Timestamp, datetime, None] = None,
                          from_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
@@ -414,6 +417,12 @@ class Tethys(object):
             The hashed str of the dataset_id.
         station_ids : list of str
             A list of hashed str of the site_ids.
+        geometry : dict or None
+            A geometry in GeoJSON format. Can be either a point or a polygon. If it's a point, then the method will perform a nearest neighbor query and return one station.
+        lat : float or None
+            Instead of using the geometry parameter, optionally use lat and lon for the spatial queries. Both lat and lon must be passed for the spatial queries and will override the geometry parameter. If only lat and lon are passed, then the method performs a nearest neighbor query.
+        lon : float or None
+            See lat description.
         from_date : str, Timestamp, datetime, or None
             The start date of the selection.
         to_date : str, Timestamp, datetime, or None
@@ -449,7 +458,7 @@ class Tethys(object):
         dataset = self._datasets[dataset_id]
         parameter = dataset['parameter']
 
-        lister = [(dataset_id, s, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, False, 'Dataset', cache) for s in station_ids]
+        lister = [(dataset_id, s, geometry, lat, lon, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, False, 'Dataset', cache) for s in station_ids]
 
         output1 = ThreadPool(threads).starmap(self.get_results, lister)
         # output2 = [d if 'station_id' in list(d.coords) else d.expand_dims('station_id').set_coords('station_id') for d in output1]

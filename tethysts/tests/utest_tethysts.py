@@ -29,6 +29,7 @@ remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys
 remote = {'bucket': 'es-hilltop', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'niwa-cliflo', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
@@ -63,6 +64,9 @@ dataset_id = 'e37f1451fcf8f9e64b66be8d'
 dataset_id = '9c7e107f99180e45eafdf5af'
 station_id = 'c6df8b47b2efce3daedef48e'
 station_id = 'a3f2d35fd6df8247cea32d03'
+
+dataset_id = '9bf36a9e6b6a2a111bf6634b'
+station_id = '4db28a9db0cb036507490887'
 #
 #
 self = Tethys([remote])
