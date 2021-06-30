@@ -464,7 +464,11 @@ class Tethys(object):
         # output2 = [d if 'station_id' in list(d.coords) else d.expand_dims('station_id').set_coords('station_id') for d in output1]
 
         if 'geometry' in output1[0]:
-            xr_ds1 = xr.combine_nested(output1, 'geometry')
+            # deal with the situation where the variable names are not the same for all datasets
+            try:
+                xr_ds1 = xr.combine_nested(output1, 'geometry', data_vars='minimal', combine_attrs="override")
+            except:
+                xr_ds1 = xr.merge(output1, combine_attrs="override")
         else:
             xr_ds1 = xr.combine_by_coords(output1, data_vars='minimal')
 
