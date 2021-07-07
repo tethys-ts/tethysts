@@ -30,6 +30,7 @@ remote = {'bucket': 'es-hilltop', 'connection_config': 'https://b2.tethys-ts.xyz
 remote = {'bucket': 'niwa-cliflo', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
@@ -43,6 +44,7 @@ remote = remotes_list[-1]
 # station_ids = [station_id, '5d06c5a8065a26b51c19b241']
 dataset_id='361ce2acd56b13da82390a69'
 station_id='00128a218015a069cb94d360'
+
 # dataset_id='320d6836250169a5f7b78163'
 # station_id='7df0d7fe8c6fcd06c50d73a6'
 station_id = 'de7cfd749e24a6b78c2281fb'
@@ -67,6 +69,9 @@ station_id = 'a3f2d35fd6df8247cea32d03'
 
 dataset_id = '9bf36a9e6b6a2a111bf6634b'
 station_id = '4db28a9db0cb036507490887'
+
+dataset_id = '9845cd0049891916f2a59c80'
+station_id = '02d4943e784fcb6acd819b72'
 #
 #
 self = Tethys([remote])
@@ -86,7 +91,7 @@ data1 = self.get_results(dataset_id, station_id, output='Dataset', cache='memory
 data1 = self.get_results(dataset_id, station_id, squeeze_dims=True, output='DataArray', cache='memory')
 data2 = self.get_results(dataset_id, station_id2, output='DataArray')
 
-
+station_ids = [s['station_id'] for s in stn_list1]
 data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset')
 
 # dataset_id = 'f4cfb5a362707785dd39ff85'
