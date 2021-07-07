@@ -470,7 +470,10 @@ class Tethys(object):
             except:
                 xr_ds1 = xr.merge(output1, combine_attrs="override")
         else:
-            xr_ds1 = xr.combine_by_coords(output1, data_vars='minimal')
+            try:
+                xr_ds1 = xr.combine_by_coords(output1, data_vars='minimal')
+            except:
+                xr_ds1 = xr.merge(output1, combine_attrs="override")
 
         ## Output
         output3 = process_results_output(xr_ds1, parameter, modified_date, quality_code, output, squeeze_dims)
