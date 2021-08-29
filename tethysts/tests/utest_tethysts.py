@@ -32,6 +32,8 @@ remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.teth
 remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz'}
+
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
@@ -72,6 +74,9 @@ station_id = '4db28a9db0cb036507490887'
 
 dataset_id = '9845cd0049891916f2a59c80'
 station_id = '02d4943e784fcb6acd819b72'
+
+dataset_id = 'b2f6bdd8aa592dacb3b257c0'
+station_id = 'fe67563f37772e63c74487be'
 #
 #
 self = Tethys([remote])
@@ -112,9 +117,15 @@ stn = [s for s in stn_list1 if 'Waiau River' in s['ref']]
 gwl_ds1 = [d for d in self.datasets if d['parameter'] == 'groundwater_depth']
 
 
+stns = self.get_stations(dataset_id)
 
+type1 = stns[0]['geometry']['type']
 
-
+if type1 == 'Polygon':
+    geo = [s['geometry']['coordinates'][0][0][-1] for s in stns]
+    geo1 = np.array(geo).round(5)
+    geo1.sort()
+    np.diff(geo1)
 
 
 
