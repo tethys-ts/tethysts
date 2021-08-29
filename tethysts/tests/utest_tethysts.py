@@ -32,6 +32,8 @@ remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.teth
 remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz'}
+
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
 #
@@ -72,6 +74,12 @@ station_id = '4db28a9db0cb036507490887'
 
 dataset_id = '9845cd0049891916f2a59c80'
 station_id = '02d4943e784fcb6acd819b72'
+
+dataset_id = 'b2f6bdd8aa592dacb3b257c0'
+station_id = 'f6818264b7bce76d18977bcc'
+
+dataset_id = 'dddb02cd5cb7ae191311ab19'
+station_id = 'fedeb59e6c7f47597a7d47c7'
 #
 #
 self = Tethys([remote])
@@ -90,6 +98,8 @@ data1 = self.get_results(dataset_id, station_id, output='Dataset', cache='memory
 
 data1 = self.get_results(dataset_id, station_id, squeeze_dims=True, output='DataArray', cache='memory')
 data2 = self.get_results(dataset_id, station_id2, output='DataArray')
+
+run_dates1 = self.get_run_dates(dataset_id, station_id)
 
 station_ids = [s['station_id'] for s in stn_list1]
 data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset')
@@ -112,9 +122,15 @@ stn = [s for s in stn_list1 if 'Waiau River' in s['ref']]
 gwl_ds1 = [d for d in self.datasets if d['parameter'] == 'groundwater_depth']
 
 
+stns = self.get_stations(dataset_id)
 
+type1 = stns[0]['geometry']['type']
 
-
+if type1 == 'Polygon':
+    geo = [s['geometry']['coordinates'][0][0][-1] for s in stns]
+    geo1 = np.array(geo).round(5)
+    geo1.sort()
+    np.diff(geo1)
 
 
 

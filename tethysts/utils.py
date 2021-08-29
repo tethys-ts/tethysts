@@ -33,6 +33,7 @@ key_patterns = {'results': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/resul
                 'stations': 'tethys/v2/{dataset_id}/stations.json.zst',
                 'station': 'tethys/v2/{dataset_id}/{station_id}/station.json.zst',
                 'dataset': 'tethys/v2/{dataset_id}/dataset.json.zst',
+                'results_object_keys': 'tethys/v2/{dataset_id}/results_object_keys.json.zst'
                 }
 
 b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'

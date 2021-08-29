@@ -64,6 +64,7 @@ class Tethys(object):
         setattr(self, '_stations', {})
         setattr(self, '_key_patterns', key_patterns)
         setattr(self, '_results', {})
+        setattr(self, '_results_obj_keys', {})
 
         if isinstance(remotes, list):
             datasets = self.get_datasets(remotes)
@@ -188,6 +189,10 @@ class Tethys(object):
 
                 self._stations.update({dataset_id: copy.deepcopy(stn_dict)})
 
+                ## Results obj keys
+                res_obj_keys = {si: s['results_object_key'] for si, s in stn_dict.items()}
+                self._results_obj_keys.update({dataset_id: copy.deepcopy(res_obj_keys)})
+
             except:
                 print('No stations.json.zst file in S3 bucket')
                 return None
@@ -204,6 +209,21 @@ class Tethys(object):
             s = [s.pop('results_object_key') for s in stn_list1]
 
         return stn_list1
+
+
+    def _get_obj_keys(self, dataset_id: str):
+        """
+
+        """
+        remote = self._remotes[dataset_id]
+        ro_key = self._key_patterns['results_object_keys'].format(dataset_id=dataset_id)
+        ro_obj = get_object_s3(ro_key, remote['connection_config'], remote['bucket'])
+        ro_list = read_json_zstd(ro_obj)
+
+        res_obj_keys = {s['station_id']: s['results_object_key'] for s in ro_list}
+        self._results_obj_keys.update({dataset_id: copy.deepcopy(res_obj_keys)})
+
+        return res_obj_keys
 
 
     def get_run_dates(self, dataset_id: str, station_id: str):
@@ -224,9 +244,14 @@ class Tethys(object):
         if dataset_id not in self._stations:
             stns = self.get_stations(dataset_id)
 
-        dataset_stn = self._stations[dataset_id][station_id]
+        results_obj_keys = self._results_obj_keys[dataset_id][station_id]
 
-        run_dates = np.unique([ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in dataset_stn['results_object_key']]).tolist()
+        if isinstance(results_obj_keys, dict):
+            res_obj_keys = self._get_obj_keys(dataset_id)
+
+            results_obj_keys = res_obj_keys[station_id]
+
+        run_dates = np.unique([ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in results_obj_keys]).tolist()
 
         return run_dates
 
@@ -238,9 +263,15 @@ class Tethys(object):
         if dataset_id not in self._stations:
             stns = self.get_stations(dataset_id)
 
-        dataset_stn = self._stations[dataset_id][station_id]
+        obj_keys = self._results_obj_keys[dataset_id][station_id]
 
-        obj_keys = dataset_stn['results_object_key']
+        if isinstance(obj_keys, dict):
+            obj_keys = [obj_keys]
+            if isinstance(run_date, (str, pd.Timestamp)):
+                res_obj_keys = self._get_obj_keys(dataset_id)
+
+                obj_keys = res_obj_keys[station_id]
+
         obj_keys_df = pd.DataFrame(obj_keys)
         obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
         last_run_date = obj_keys_df['run_date'].max()
