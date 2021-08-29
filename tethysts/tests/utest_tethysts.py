@@ -76,7 +76,10 @@ dataset_id = '9845cd0049891916f2a59c80'
 station_id = '02d4943e784fcb6acd819b72'
 
 dataset_id = 'b2f6bdd8aa592dacb3b257c0'
-station_id = 'fe67563f37772e63c74487be'
+station_id = 'f6818264b7bce76d18977bcc'
+
+dataset_id = 'dddb02cd5cb7ae191311ab19'
+station_id = 'fedeb59e6c7f47597a7d47c7'
 #
 #
 self = Tethys([remote])
@@ -95,6 +98,8 @@ data1 = self.get_results(dataset_id, station_id, output='Dataset', cache='memory
 
 data1 = self.get_results(dataset_id, station_id, squeeze_dims=True, output='DataArray', cache='memory')
 data2 = self.get_results(dataset_id, station_id2, output='DataArray')
+
+run_dates1 = self.get_run_dates(dataset_id, station_id)
 
 station_ids = [s['station_id'] for s in stn_list1]
 data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset')

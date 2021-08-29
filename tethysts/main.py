@@ -265,10 +265,12 @@ class Tethys(object):
 
         obj_keys = self._results_obj_keys[dataset_id][station_id]
 
-        if isinstance(obj_keys, dict) and isinstance(run_date, (str, pd.Timestamp)):
-            res_obj_keys = self._get_obj_keys(dataset_id)
+        if isinstance(obj_keys, dict):
+            obj_keys = [obj_keys]
+            if isinstance(run_date, (str, pd.Timestamp)):
+                res_obj_keys = self._get_obj_keys(dataset_id)
 
-            obj_keys = res_obj_keys[station_id]
+                obj_keys = res_obj_keys[station_id]
 
         obj_keys_df = pd.DataFrame(obj_keys)
         obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
