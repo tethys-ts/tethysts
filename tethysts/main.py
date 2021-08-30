@@ -189,10 +189,6 @@ class Tethys(object):
 
                 self._stations.update({dataset_id: copy.deepcopy(stn_dict)})
 
-                ## Results obj keys
-                res_obj_keys = {si: s['results_object_key'] for si, s in stn_dict.items()}
-                self._results_obj_keys.update({dataset_id: copy.deepcopy(res_obj_keys)})
-
             except:
                 print('No stations.json.zst file in S3 bucket')
                 return None
@@ -215,15 +211,18 @@ class Tethys(object):
         """
 
         """
-        remote = self._remotes[dataset_id]
-        ro_key = self._key_patterns['results_object_keys'].format(dataset_id=dataset_id)
-        ro_obj = get_object_s3(ro_key, remote['connection_config'], remote['bucket'])
-        ro_list = read_json_zstd(ro_obj)
+        if dataset_id in self._results_obj_keys:
+            obj_keys = self._results_obj_keys[dataset_id]
+        else:
+            remote = self._remotes[dataset_id]
+            ro_key = self._key_patterns['results_object_keys'].format(dataset_id=dataset_id)
+            ro_obj = get_object_s3(ro_key, remote['connection_config'], remote['bucket'])
+            ro_list = read_json_zstd(ro_obj)
 
-        res_obj_keys = {s['station_id']: s['results_object_key'] for s in ro_list}
-        self._results_obj_keys.update({dataset_id: copy.deepcopy(res_obj_keys)})
+            obj_keys = {s['station_id']: s['results_object_key'] for s in ro_list}
+            self._results_obj_keys.update({dataset_id: copy.deepcopy(obj_keys)})
 
-        return res_obj_keys
+        return obj_keys
 
 
     def get_run_dates(self, dataset_id: str, station_id: str):
@@ -241,17 +240,11 @@ class Tethys(object):
         -------
         list
         """
-        if dataset_id not in self._stations:
-            stns = self.get_stations(dataset_id)
+        res_obj_keys = self._get_obj_keys(dataset_id)
 
-        results_obj_keys = self._results_obj_keys[dataset_id][station_id]
+        obj_keys = res_obj_keys[station_id]
 
-        if isinstance(results_obj_keys, dict):
-            res_obj_keys = self._get_obj_keys(dataset_id)
-
-            results_obj_keys = res_obj_keys[station_id]
-
-        run_dates = np.unique([ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in results_obj_keys]).tolist()
+        run_dates = np.unique([ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in obj_keys]).tolist()
 
         return run_dates
 
@@ -260,38 +253,32 @@ class Tethys(object):
         """
 
         """
-        if dataset_id not in self._stations:
-            stns = self.get_stations(dataset_id)
-
-        obj_keys = self._results_obj_keys[dataset_id][station_id]
-
-        if isinstance(obj_keys, dict):
-            obj_keys = [obj_keys]
-            if isinstance(run_date, (str, pd.Timestamp)):
-                res_obj_keys = self._get_obj_keys(dataset_id)
-
-                obj_keys = res_obj_keys[station_id]
-
-        obj_keys_df = pd.DataFrame(obj_keys)
-        obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
-        last_run_date = obj_keys_df['run_date'].max()
-        last_key = obj_keys_df[obj_keys_df['run_date'] == last_run_date]['key']
-
-        ## Set the correct run_date
         if isinstance(run_date, (str, pd.Timestamp)):
+            res_obj_keys = self._get_obj_keys(dataset_id)
+
+            obj_keys = res_obj_keys[station_id]
+
+            obj_keys_df = pd.DataFrame(obj_keys)
+            obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
+
             run_date1 = pd.Timestamp(run_date)
 
             obj_key_df = obj_keys_df[obj_keys_df['run_date'] == run_date1]
 
             if obj_key_df.empty:
-                print('Requested run_date is not available, returning last run_date results')
-                obj_key = last_key
+                raise ValueError('Requested run_date is not available, run the get_run_dates method.')
             else:
-                obj_key = obj_key_df['key']
-        else:
-            obj_key = last_key
+                obj_key = obj_key_df['key'].iloc[0]
 
-        return obj_key.iloc[0]
+        else:
+            if dataset_id not in self._stations:
+                stns = self.get_stations(dataset_id)
+
+            stn = self._stations[dataset_id][station_id]
+
+            obj_key = stn['results_object_key']['key']
+
+        return obj_key
 
 
     def get_results(self,

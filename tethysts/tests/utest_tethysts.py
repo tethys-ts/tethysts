@@ -77,6 +77,8 @@ station_id = '02d4943e784fcb6acd819b72'
 
 dataset_id = 'b2f6bdd8aa592dacb3b257c0'
 station_id = 'f6818264b7bce76d18977bcc'
+station_id = 'ffed6a7545f696e6d0b11826'
+station_ids = [station_id, 'fdfcccb6820147a8bc7eca4e']
 
 dataset_id = 'dddb02cd5cb7ae191311ab19'
 station_id = 'fedeb59e6c7f47597a7d47c7'
@@ -94,7 +96,7 @@ data1 = self.get_results(dataset_id, station_id, output='Dataset', cache='memory
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, remove_height=True, output='DataArray')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, output='Dict')
 # data1 = self.get_results(dataset_id, station_id, output='Dict')
-# data1 = self.get_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
+data1 = self.get_results(dataset_id, station_id, run_date='2021-08-29T00:00:00', output='Dataset')
 
 data1 = self.get_results(dataset_id, station_id, squeeze_dims=True, output='DataArray', cache='memory')
 data2 = self.get_results(dataset_id, station_id2, output='DataArray')
@@ -102,7 +104,7 @@ data2 = self.get_results(dataset_id, station_id2, output='DataArray')
 run_dates1 = self.get_run_dates(dataset_id, station_id)
 
 station_ids = [s['station_id'] for s in stn_list1]
-data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset')
+data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset', threads=10)
 
 # dataset_id = 'f4cfb5a362707785dd39ff85'
 # station_id = 'ff4213c61878e098e07df513'
