@@ -186,17 +186,18 @@ class Tethys(object):
                 stn_obj = get_object_s3(site_key, remote['connection_config'], remote['bucket'])
                 stn_list = read_json_zstd(stn_obj)
                 stn_dict = {s['station_id']: s for s in stn_list if isinstance(s, dict)}
-
-                self._stations.update({dataset_id: copy.deepcopy(stn_dict)})
-
-                ## Results obj keys
-                if not 'version' in self._datasets[dataset_id]:
-                    res_obj_keys = {si: s['results_object_key'] for si, s in stn_dict.items()}
-                    self._results_obj_keys.update({dataset_id: copy.deepcopy(res_obj_keys)})
-
             except:
                 print('No stations.json.zst file in S3 bucket')
                 return None
+
+            ## Results obj keys if old version
+            if not 'version' in self._datasets[dataset_id]:
+
+                res_obj_keys = {si: s['results_object_key'] for si, s in stn_dict.items()}
+                self._results_obj_keys.update({dataset_id: copy.deepcopy(res_obj_keys)})
+                [s.update({'results_object_key': s['results_object_key'][-1]}) for i, s in stn_dict.items()]
+
+            self._stations.update({dataset_id: copy.deepcopy(stn_dict)})
 
         ## Spatial query
         stn_ids = spatial_query(stn_dict, geometry, lat, lon, distance)

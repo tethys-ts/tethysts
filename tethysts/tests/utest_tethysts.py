@@ -97,6 +97,7 @@ data1 = self.get_results(dataset_id, station_id, output='Dataset', cache='memory
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, output='Dict')
 # data1 = self.get_results(dataset_id, station_id, output='Dict')
 data1 = self.get_results(dataset_id, station_id, run_date='2021-08-29T00:00:00', output='Dataset')
+data1 = self.get_results(dataset_id, station_id, run_date='2021-03-12T18:00:16', output='Dataset')
 
 data1 = self.get_results(dataset_id, station_id, squeeze_dims=True, output='DataArray', cache='memory')
 data2 = self.get_results(dataset_id, station_id2, output='DataArray')
