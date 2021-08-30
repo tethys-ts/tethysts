@@ -189,6 +189,11 @@ class Tethys(object):
 
                 self._stations.update({dataset_id: copy.deepcopy(stn_dict)})
 
+                ## Results obj keys
+                if not 'version' in self._datasets[dataset_id]:
+                    res_obj_keys = {si: s['results_object_key'] for si, s in stn_dict.items()}
+                    self._results_obj_keys.update({dataset_id: copy.deepcopy(res_obj_keys)})
+
             except:
                 print('No stations.json.zst file in S3 bucket')
                 return None
@@ -214,13 +219,17 @@ class Tethys(object):
         if dataset_id in self._results_obj_keys:
             obj_keys = self._results_obj_keys[dataset_id]
         else:
-            remote = self._remotes[dataset_id]
-            ro_key = self._key_patterns['results_object_keys'].format(dataset_id=dataset_id)
-            ro_obj = get_object_s3(ro_key, remote['connection_config'], remote['bucket'])
-            ro_list = read_json_zstd(ro_obj)
+            if 'version' in self._datasets[dataset_id]:
+                remote = self._remotes[dataset_id]
+                ro_key = self._key_patterns['results_object_keys'].format(dataset_id=dataset_id)
+                ro_obj = get_object_s3(ro_key, remote['connection_config'], remote['bucket'])
+                ro_list = read_json_zstd(ro_obj)
 
-            obj_keys = {s['station_id']: s['results_object_key'] for s in ro_list}
-            self._results_obj_keys.update({dataset_id: copy.deepcopy(obj_keys)})
+                obj_keys = {s['station_id']: s['results_object_key'] for s in ro_list}
+                self._results_obj_keys.update({dataset_id: copy.deepcopy(obj_keys)})
+            else:
+                stns = self.get_stations(dataset_id)
+                obj_keys = self._results_obj_keys[dataset_id]
 
         return obj_keys
 
