@@ -67,14 +67,14 @@ class Tethys(object):
         setattr(self, '_results_obj_keys', {})
 
         if isinstance(remotes, list):
-            datasets = self.get_datasets(remotes)
+            _ = self.get_datasets(remotes)
 
         elif remotes is None:
             resp = requests.get(public_remote_key)
             resp.raise_for_status()
 
             remotes = read_json_zstd(resp.content)
-            datasets = self.get_datasets(remotes)
+            _ = self.get_datasets(remotes)
 
         elif remotes != 'pass':
             raise ValueError('remotes must be a list of dict or None.')
@@ -103,7 +103,7 @@ class Tethys(object):
         dict
             of datasets
         """
-        output = ThreadPool(threads).map(self.get_remote_datasets, remotes)
+        _ = ThreadPool(threads).map(self.get_remote_datasets, remotes)
         setattr(self, 'remotes', remotes)
 
         return self.datasets
@@ -208,7 +208,7 @@ class Tethys(object):
             stn_list1 = list(stn_dict.values())
 
         if not results_object_keys:
-            s = [s.pop('results_object_key') for s in stn_list1]
+            [s.pop('results_object_key') for s in stn_list1]
 
         return stn_list1
 
@@ -229,7 +229,7 @@ class Tethys(object):
                 obj_keys = {s['station_id']: s['results_object_key'] for s in ro_list}
                 self._results_obj_keys.update({dataset_id: copy.deepcopy(obj_keys)})
             else:
-                stns = self.get_stations(dataset_id)
+                _ = self.get_stations(dataset_id)
                 obj_keys = self._results_obj_keys[dataset_id]
 
         return obj_keys
@@ -282,7 +282,7 @@ class Tethys(object):
 
         else:
             if dataset_id not in self._stations:
-                stns = self.get_stations(dataset_id)
+                _ = self.get_stations(dataset_id)
 
             stn = self._stations[dataset_id][station_id]
 
@@ -367,7 +367,7 @@ class Tethys(object):
         elif ((geom_type in ['Point', 'Polygon']) or (isinstance(lat, float) and isinstance(lon, float))):
             ## Get all stations
             if dataset_id not in self._stations:
-                stns = self.get_stations(dataset_id)
+                _ = self.get_stations(dataset_id)
 
             stn_dict = self._stations[dataset_id]
 
