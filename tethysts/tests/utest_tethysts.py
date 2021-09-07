@@ -32,7 +32,7 @@ remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.teth
 remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
-remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
 remote = {'bucket': 'nz-open-modelling-consortium', 'connection_config': 'https://b2.nzrivers.xyz'}
 
 remote = remotes_list[-1]
@@ -78,9 +78,9 @@ station_id = '4db28a9db0cb036507490887'
 dataset_id = '9845cd0049891916f2a59c80'
 station_id = '02d4943e784fcb6acd819b72'
 
-dataset_id = '668373c15a01955128c95bbd'
-station_id = '673d6d9fca3ccf38fa009ad1'
-station_ids = [station_id, '67351e51dc55f730471248fc']
+dataset_id = '2c004d8366bcc22927d68994'
+station_id = 'fe67563f37772e63c74487be'
+station_ids = [station_id, 'fe35e6509703baebf294c59e']
 
 dataset_id = 'dddb02cd5cb7ae191311ab19'
 station_id = 'fedeb59e6c7f47597a7d47c7'

@@ -22,7 +22,7 @@ pd.options.display.max_columns = 10
 
 
 ##############################################
-### Parameters
+### data models
 
 
 
@@ -122,13 +122,20 @@ class Tethys(object):
                 A string of the bucket name.
             connection_config : dict or str
                 A dict of strings of service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. Or it could be a string of the public_url endpoint.
+            version: int
+                The S3 object structure version.
 
         Returns
         -------
         None
         """
+        if 'version' in remote:
+            version = remote['version']
+        else:
+            version = 2
+
         try:
-            ds_obj = get_object_s3(self._key_patterns['datasets'], remote['connection_config'], remote['bucket'])
+            ds_obj = get_object_s3(self._key_patterns[version]['datasets'], remote['connection_config'], remote['bucket'])
             ds_list = read_json_zstd(ds_obj)
 
             ds_list2 = copy.deepcopy(ds_list)
@@ -136,7 +143,7 @@ class Tethys(object):
             self.datasets.extend(ds_list2)
 
             ds_dict = {d['dataset_id']: d for d in ds_list}
-            remote_dict = {d: {'dataset_id': d, 'bucket': remote['bucket'], 'connection_config': remote['connection_config']} for d in ds_dict}
+            remote_dict = {d: {'dataset_id': d, 'bucket': remote['bucket'], 'connection_config': remote['connection_config'], 'version': version} for d in ds_dict}
 
             self._datasets.update(ds_dict)
             self._remotes.update(remote_dict)
@@ -177,7 +184,7 @@ class Tethys(object):
         """
         remote = self._remotes[dataset_id]
 
-        site_key = self._key_patterns['stations'].format(dataset_id=dataset_id)
+        site_key = self._key_patterns[remote['version']]['stations'].format(dataset_id=dataset_id)
 
         if dataset_id in self._stations:
             stn_dict = copy.deepcopy(self._stations[dataset_id])
@@ -222,7 +229,8 @@ class Tethys(object):
         else:
             if 'version' in self._datasets[dataset_id]:
                 remote = self._remotes[dataset_id]
-                ro_key = self._key_patterns['results_object_keys'].format(dataset_id=dataset_id)
+
+                ro_key = self._key_patterns[remote['version']]['results_object_keys'].format(dataset_id=dataset_id)
                 ro_obj = get_object_s3(ro_key, remote['connection_config'], remote['bucket'])
                 ro_list = read_json_zstd(ro_obj)
 
