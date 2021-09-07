@@ -33,6 +33,7 @@ remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.x
 remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'nz-open-modelling-consortium', 'connection_config': 'https://b2.nzrivers.xyz'}
 
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
@@ -46,6 +47,8 @@ remote = remotes_list[-1]
 # station_ids = [station_id, '5d06c5a8065a26b51c19b241']
 dataset_id='361ce2acd56b13da82390a69'
 station_id='00128a218015a069cb94d360'
+
+dataset_id = '22a389416b05243e3957a113'
 
 # dataset_id='320d6836250169a5f7b78163'
 # station_id='7df0d7fe8c6fcd06c50d73a6'
@@ -75,10 +78,9 @@ station_id = '4db28a9db0cb036507490887'
 dataset_id = '9845cd0049891916f2a59c80'
 station_id = '02d4943e784fcb6acd819b72'
 
-dataset_id = 'b2f6bdd8aa592dacb3b257c0'
-station_id = 'f6818264b7bce76d18977bcc'
-station_id = 'ffed6a7545f696e6d0b11826'
-station_ids = [station_id, 'fdfcccb6820147a8bc7eca4e']
+dataset_id = '668373c15a01955128c95bbd'
+station_id = '673d6d9fca3ccf38fa009ad1'
+station_ids = [station_id, '67351e51dc55f730471248fc']
 
 dataset_id = 'dddb02cd5cb7ae191311ab19'
 station_id = 'fedeb59e6c7f47597a7d47c7'
@@ -123,6 +125,7 @@ stn = [s for s in stn_list1 if 'Waiau River' in s['ref']]
 
 
 gwl_ds1 = [d for d in self.datasets if d['parameter'] == 'groundwater_depth']
+era5_ds1 = [d for d in self.datasets if d['owner'] == 'ECMWF']
 
 
 stns = self.get_stations(dataset_id)
