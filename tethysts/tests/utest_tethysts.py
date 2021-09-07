@@ -32,7 +32,8 @@ remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.teth
 remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz'}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
-remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
+remote = {'bucket': 'nz-open-modelling-consortium', 'connection_config': 'https://b2.nzrivers.xyz'}
 
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
@@ -46,6 +47,8 @@ remote = remotes_list[-1]
 # station_ids = [station_id, '5d06c5a8065a26b51c19b241']
 dataset_id='361ce2acd56b13da82390a69'
 station_id='00128a218015a069cb94d360'
+
+dataset_id = '22a389416b05243e3957a113'
 
 # dataset_id='320d6836250169a5f7b78163'
 # station_id='7df0d7fe8c6fcd06c50d73a6'
@@ -75,8 +78,9 @@ station_id = '4db28a9db0cb036507490887'
 dataset_id = '9845cd0049891916f2a59c80'
 station_id = '02d4943e784fcb6acd819b72'
 
-dataset_id = 'b2f6bdd8aa592dacb3b257c0'
-station_id = 'f6818264b7bce76d18977bcc'
+dataset_id = '2c004d8366bcc22927d68994'
+station_id = 'fe67563f37772e63c74487be'
+station_ids = [station_id, 'fe35e6509703baebf294c59e']
 
 dataset_id = 'dddb02cd5cb7ae191311ab19'
 station_id = 'fedeb59e6c7f47597a7d47c7'
@@ -94,7 +98,8 @@ data1 = self.get_results(dataset_id, station_id, output='Dataset', cache='memory
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, remove_height=True, output='DataArray')
 # data1 = self.get_results(dataset_id, station_id, modified_date=True, quality_code=True, output='Dict')
 # data1 = self.get_results(dataset_id, station_id, output='Dict')
-# data1 = self.get_results(dataset_id, station_id, from_date='2012-01-02 00:00', output='Dataset')
+data1 = self.get_results(dataset_id, station_id, run_date='2021-08-29T00:00:00', output='Dataset')
+data1 = self.get_results(dataset_id, station_id, run_date='2021-03-12T18:00:16', output='Dataset')
 
 data1 = self.get_results(dataset_id, station_id, squeeze_dims=True, output='DataArray', cache='memory')
 data2 = self.get_results(dataset_id, station_id2, output='DataArray')
@@ -102,7 +107,7 @@ data2 = self.get_results(dataset_id, station_id2, output='DataArray')
 run_dates1 = self.get_run_dates(dataset_id, station_id)
 
 station_ids = [s['station_id'] for s in stn_list1]
-data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset')
+data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset', threads=10)
 
 # dataset_id = 'f4cfb5a362707785dd39ff85'
 # station_id = 'ff4213c61878e098e07df513'
@@ -120,6 +125,7 @@ stn = [s for s in stn_list1 if 'Waiau River' in s['ref']]
 
 
 gwl_ds1 = [d for d in self.datasets if d['parameter'] == 'groundwater_depth']
+era5_ds1 = [d for d in self.datasets if d['owner'] == 'ECMWF']
 
 
 stns = self.get_stations(dataset_id)

@@ -19,3 +19,4 @@ dist/
 # param*.yml
 /.project
 /.pydevproject
+tethysts/tests/utest_*.py
