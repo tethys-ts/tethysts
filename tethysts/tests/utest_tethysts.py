@@ -25,15 +25,15 @@ remotes_list = param['remotes']
 ######################################
 ### Testing
 
-remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 2}
 remote = {'bucket': 'es-hilltop', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'niwa-cliflo', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
-remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
-remote = {'bucket': 'nz-open-modelling-consortium', 'connection_config': 'https://b2.nzrivers.xyz'}
+remote = {'bucket': 'nz-open-modelling-consortium', 'connection_config': 'https://b2.nzrivers.xyz', 'version': 3}
 
 remote = remotes_list[-1]
 # remote['connection_config'] = 'https://b2.tethys-ts.xyz'
@@ -82,8 +82,17 @@ dataset_id = '2c004d8366bcc22927d68994'
 station_id = 'fe67563f37772e63c74487be'
 station_ids = [station_id, 'fe35e6509703baebf294c59e']
 
+dataset_id = '2c004d8366bcc22927d68994'
+station_id = '673d6d9fca3ccf38fa009ad1'
+
 dataset_id = 'dddb02cd5cb7ae191311ab19'
 station_id = 'fedeb59e6c7f47597a7d47c7'
+
+dataset_id = 'de3bff8e3c3a2ad9200d8684'
+station_id = 'fedeb59e6c7f47597a7d47c7'
+
+dataset_id = '99d5109c61642e55e8a57657'
+station_id = 'de3f6e8951378d6c16186b8f'
 #
 #
 self = Tethys([remote])
