@@ -28,7 +28,7 @@ remotes_list = param['remotes']
 remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 2}
 remote = {'bucket': 'es-hilltop', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'niwa-cliflo', 'connection_config': 'https://b2.tethys-ts.xyz'}
-remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 2}
 remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
@@ -93,6 +93,12 @@ station_id = 'fedeb59e6c7f47597a7d47c7'
 
 dataset_id = '99d5109c61642e55e8a57657'
 station_id = 'de3f6e8951378d6c16186b8f'
+
+dataset_id = 'f27574a7b38eab5b0bc2b3d7'
+station_id = '9c90243e84b8c5b17f0726c4'
+
+dataset_id = 'aa89e5b63d55efcd0e53bf21'
+station_id = 'ff027bb124ec584d0d02af0d'
 #
 #
 self = Tethys([remote])

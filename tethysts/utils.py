@@ -13,13 +13,13 @@ import pickle
 import copy
 import boto3
 import botocore
-from multiprocessing.pool import ThreadPool
 from time import sleep
 from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
 from scipy import spatial
 import traceback
+import tethys_data_models as tdm
 
 pd.options.display.max_columns = 10
 
@@ -228,6 +228,9 @@ def s3_connection(connection_config, max_pool_connections=30):
     -------
     S3 client object
     """
+    ## Validate config
+    _ = tdm.base.ConnectionConfig(**connection_config)
+
     s3_config = copy.deepcopy(connection_config)
 
     if 'config' in s3_config:
@@ -272,6 +275,9 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
     bytes
         bytes object of the S3 object.
     """
+    ## Validate config
+    _ = tdm.base.ConnectionConfig(**connection_config)
+
     counter1 = counter
     while True:
         try:

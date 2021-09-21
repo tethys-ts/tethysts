@@ -17,6 +17,7 @@ from tethysts.utils import get_object_s3, result_filters, process_results_output
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key
 from typing import Optional, List, Any, Union
 from enum import Enum
+import tethys_data_models as tdm
 
 pd.options.display.max_columns = 10
 
@@ -103,6 +104,10 @@ class Tethys(object):
         dict
             of datasets
         """
+        ## Validate remotes
+        for remote in remotes:
+            _ = tdm.base.Remote(**remote)
+
         _ = ThreadPool(threads).map(self.get_remote_datasets, remotes)
         setattr(self, 'remotes', remotes)
 
