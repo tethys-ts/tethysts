@@ -275,13 +275,13 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
     bytes
         bytes object of the S3 object.
     """
-    ## Validate config
-    _ = tdm.base.ConnectionConfig(**connection_config)
-
     counter1 = counter
     while True:
         try:
             if isinstance(connection_config, dict):
+                ## Validate config
+                _ = tdm.base.ConnectionConfig(**connection_config)
+
                 s3 = s3_connection(connection_config)
 
                 ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
