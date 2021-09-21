@@ -10,7 +10,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 name = 'tethysts'
 main_package = 'tethysts'
 datasets = 'datasets/time_series'
-version = '0.2.18'
+version = '0.2.19'
 descrip = 'tethys time series S3 extraction'
 
 # The below code is for readthedocs. To have sphinx/readthedocs interact with
@@ -102,19 +102,15 @@ setup(
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
-        'Topic :: Software Development :: Build Tools',
+        "Topic :: Scientific/Engineering :: Hydrology",
 
         # Pick your license as you wish
         'License :: OSI Approved :: Apache Software License',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
 
     # This field adds keywords for your project which will appear on the
