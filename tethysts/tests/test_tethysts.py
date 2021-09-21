@@ -13,7 +13,7 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 2}
 
 dataset_id = 'b5d84aa773de2a747079c127'
 station_id = '4db28a9db0cb036507490887'
@@ -111,38 +111,3 @@ def test_get_nearest_results2():
 #     s3 = t1.get_results(dataset_id, lat=lat, lon=lon, distance=distance)
 
 #     assert len(s3) >= 3
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

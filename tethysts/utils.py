@@ -13,13 +13,13 @@ import pickle
 import copy
 import boto3
 import botocore
-from multiprocessing.pool import ThreadPool
 from time import sleep
 from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
 from scipy import spatial
 import traceback
+import tethys_data_models as tdm
 
 pd.options.display.max_columns = 10
 
@@ -228,6 +228,9 @@ def s3_connection(connection_config, max_pool_connections=30):
     -------
     S3 client object
     """
+    ## Validate config
+    _ = tdm.base.ConnectionConfig(**connection_config)
+
     s3_config = copy.deepcopy(connection_config)
 
     if 'config' in s3_config:
@@ -246,7 +249,7 @@ def s3_connection(connection_config, max_pool_connections=30):
     return s3
 
 
-def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=5):
+def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=5, file_path=None, chunk_size=8192*5):
     """
     General function to get an object from an S3 bucket.
 
@@ -262,6 +265,10 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
         The compression of the object that should be decompressed. Options include zstd.
     counter : int
         Number of times to retry to get the object.
+    file_path : str or None
+        If file_path is a str path, then the object will be saved to disk instead of held in memory. The default of None will not save it to disk.
+    chunk_size : int
+        The chunk size in bytes to iteratively save to disk. Only relevant if file_path is a str path.
 
     Returns
     -------
@@ -272,6 +279,9 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
     while True:
         try:
             if isinstance(connection_config, dict):
+                ## Validate config
+                _ = tdm.base.ConnectionConfig(**connection_config)
+
                 s3 = s3_connection(connection_config)
 
                 ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
@@ -279,10 +289,23 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
 
             elif isinstance(connection_config, str):
                 url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
-                resp = requests.get(url)
-                resp.raise_for_status()
+                if isinstance(file_path, str):
+                    # local_filename = url.split('/')[-1]
+                    # NOTE the stream=True parameter below
+                    with requests.get(url, stream=True) as r:
+                        r.raise_for_status()
+                        with open(file_path, 'wb') as f:
+                            for chunk in r.iter_content(chunk_size=chunk_size):
+                                # If you have chunk encoded response uncomment if
+                                # and set chunk_size parameter to None.
+                                #if chunk:
+                                f.write(chunk)
+                    ts_obj = None
+                else:
+                    resp = requests.get(url)
+                    resp.raise_for_status()
 
-                ts_obj = resp.content
+                    ts_obj = resp.content
 
             if isinstance(compression, str):
                 if compression == 'zstd':
