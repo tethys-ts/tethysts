@@ -22,7 +22,7 @@ Import the Tethys class:
    from tethysts import Tethys
    from pprint import pprint as print
 
-   remotes = []{'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}]
+   remotes = [{'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}]
    dataset_id = 'b5d84aa773de2a747079c127'
    station_id = '4db28a9db0cb036507490887'
 
