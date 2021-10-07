@@ -3,6 +3,7 @@ import yaml
 import pandas as pd
 import os
 import shapely
+import geopandas as gpd
 from shapely.geometry import shape
 from shapely.strtree import STRtree
 import pickle
@@ -45,8 +46,8 @@ remote = remotes_list[-1]
 # station_id2 = 'fe9a63fae6f7fe58474bb3c0'
 # station_id = '6b75a7fb1453ef94148bda19'
 # station_ids = [station_id, '5d06c5a8065a26b51c19b241']
-dataset_id='361ce2acd56b13da82390a69'
-station_id='00128a218015a069cb94d360'
+dataset_id='0b2bd62cc42f3096136f11e9'
+station_id='e0c38cc6fd3eb51fb553d45a'
 
 dataset_id = '22a389416b05243e3957a113'
 
@@ -85,7 +86,7 @@ station_ids = [station_id, 'fe35e6509703baebf294c59e']
 dataset_id = '2c004d8366bcc22927d68994'
 station_id = '673d6d9fca3ccf38fa009ad1'
 
-dataset_id = 'dddb02cd5cb7ae191311ab19'
+dataset_id = 'f27574a7b38eab5b0bc2b3d7'
 station_id = 'fedeb59e6c7f47597a7d47c7'
 
 dataset_id = 'de3bff8e3c3a2ad9200d8684'
@@ -97,8 +98,11 @@ station_id = 'de3f6e8951378d6c16186b8f'
 dataset_id = 'f27574a7b38eab5b0bc2b3d7'
 station_id = '9c90243e84b8c5b17f0726c4'
 
-dataset_id = 'aa89e5b63d55efcd0e53bf21'
-station_id = 'ff027bb124ec584d0d02af0d'
+dataset_id = '0a1583c61202c6791ae39e63'
+station_id = '5d06c5a8065a26b51c19b241'
+
+dataset_id = '0a1583c61202c6791ae39e63'
+
 #
 #
 self = Tethys([remote])
@@ -141,7 +145,7 @@ stn = [s for s in stn_list1 if 'Waiau River' in s['ref']]
 
 gwl_ds1 = [d for d in self.datasets if d['parameter'] == 'groundwater_depth']
 era5_ds1 = [d for d in self.datasets if d['owner'] == 'ECMWF']
-
+nz_ds1 = [d for d in self.datasets if d['owner'] == 'NZ Open Modelling Consortium']
 
 stns = self.get_stations(dataset_id)
 
@@ -152,6 +156,54 @@ if type1 == 'Polygon':
     geo1 = np.array(geo).round(5)
     geo1.sort()
     np.diff(geo1)
+
+
+# geo1 = []
+# for s in stn_list1:
+#     s1 = {'station_id': s['station_id'], 'lon': s['geometry']['coordinates'][0], 'lat': s['geometry']['coordinates'][1]}
+#     geo1.append(s1)
+
+geo1 = []
+for s in stn_list1:
+    s1 = {'station_id': s['station_id'], 'geo': shape(s['geometry']).simplify(0.1)}
+    geo1.append(s1)
+
+sdf = pd.DataFrame(geo1)
+
+sdf2 = gpd.GeoDataFrame(sdf[['station_id']], geometry=sdf['geo'])
+sdf2['x'] = sdf2.geometry.x.round(1)
+sdf2['y'] = sdf2.geometry.y.round(1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

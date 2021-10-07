@@ -14,6 +14,6 @@ The GitHub repository is found `here <https://github.com/tethys-ts/tethysts>`_.
 
    installation
    design
-   usage
+   usage_a
    package_references
    license-terms
