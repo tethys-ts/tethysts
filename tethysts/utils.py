@@ -423,13 +423,60 @@ def convert_results_v2_to_v3(data):
 
     data2 = data2.expand_dims('geometry')
 
-    # vars2 = list(data2.variables)
-
-    # if 'name' in vars2:
-    #     data2 = data2.assign({'name': (('station_id'), data2['name'])})
-    #     data2['name'].attrs = data['name'].attrs
-    # if 'ref' in vars2:
-    #     data2 = data2.assign({'ref': (('station_id'), data2['ref'])})
-    #     data2['ref'].attrs = data['ref'].attrs
-
     return data2
+
+
+def convert_results_v3_to_v4(data):
+    """
+    Function to convert xarray Dataset results in verion 3 structure to version 4 structure.
+    """
+    ## Change the extent to station_geometry
+    if 'extent' in list(data.coords):
+        data = data.rename({'extent': 'station_geometry'})
+
+    ## Change spatial_distribution to result_type
+    vars1 = list(data.variables)
+    param = [p for p in vars1 if 'dataset_id' in data[p].attrs][0]
+    param_attrs = data[param].attrs
+    sd_attr = param_attrs.pop('spatial_distribution')
+
+    if sd_attr == 'sparse':
+        result_type = 'time_series'
+    else:
+        result_type = 'grid'
+
+    data[param].attrs.update({'result_type': result_type})
+
+    ## change base attrs
+    _ = data.attrs.pop('featureType')
+    data.attrs.update({'result_type': result_type, 'version': 4})
+
+    return data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

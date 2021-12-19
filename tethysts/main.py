@@ -13,8 +13,8 @@ import orjson
 from datetime import datetime
 import copy
 from multiprocessing.pool import ThreadPool
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key
-# from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
+# from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
 from typing import Optional, List, Any, Union
 from enum import Enum
 import tethys_data_models as tdm
@@ -415,9 +415,12 @@ class Tethys(object):
         attrs = xr3.attrs.copy()
         if 'version' not in attrs:
             xr3 = convert_results_v2_to_v3(xr3)
+        else:
+            if attrs['version'] == 3:
+                xr3 = convert_results_v3_to_v4(xr3)
 
         ## Extra spatial query if data are stored in blocks
-        if ('extent' in xr3) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
+        if ('station_geometry' in xr3) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
             xr3 = get_nearest_from_extent(xr3, geometry, lat, lon)
 
         ## Filters

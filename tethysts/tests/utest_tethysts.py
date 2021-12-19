@@ -49,7 +49,8 @@ remote = remotes_list[-1]
 dataset_id='0b2bd62cc42f3096136f11e9'
 station_id='e0c38cc6fd3eb51fb553d45a'
 
-dataset_id = '22a389416b05243e3957a113'
+dataset_id = 'de3bff8e3c3a2ad9200d8684'
+station_id = 'fedeb59e6c7f47597a7d47c7'
 
 # dataset_id='320d6836250169a5f7b78163'
 # station_id='7df0d7fe8c6fcd06c50d73a6'
@@ -146,8 +147,14 @@ stn = [s for s in stn_list1 if 'Waiau River' in s['ref']]
 gwl_ds1 = [d for d in self.datasets if d['parameter'] == 'groundwater_depth']
 era5_ds1 = [d for d in self.datasets if d['owner'] == 'ECMWF']
 nz_ds1 = [d for d in self.datasets if d['owner'] == 'NZ Open Modelling Consortium']
+hh_ds1 = [d for d in self.datasets if d['owner'] == 'Headwaters Hydrology'][0]
 
-stns = self.get_stations(dataset_id)
+stns = self.get_stations(hh_ds1['dataset_id'])
+
+stn_id = 'fd60b5bafe19d6b243dda43d'
+
+data1 = self.get_results(hh_ds1['dataset_id'], stn_id, output='Dataset')
+
 
 type1 = stns[0]['geometry']['type']
 
