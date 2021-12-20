@@ -410,9 +410,9 @@ class Tethys(object):
 
         ## Convert to new version
         attrs = xr3.attrs.copy()
-        dims = list(xr3.coords.dims)
-        if ('version' not in attrs) or (len(dims) < 3):
+        if ('version' not in attrs):
             xr3 = convert_results_v2_to_v3(xr3)
+            attrs['version'] = 3
 
         if attrs['version'] == 3:
             xr3 = convert_results_v3_to_v4(xr3)
