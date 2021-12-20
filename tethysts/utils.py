@@ -419,9 +419,26 @@ def convert_results_v2_to_v3(data):
 
     # data2['station_id'].attrs = data['station_id'].attrs
     data2['geometry'].attrs = {'long_name': 'The hexadecimal encoding of the Well-Known Binary (WKB) geometry', 'crs_EPSG': 4326}
-    data2.attrs.update({'version': 3})
 
     data2 = data2.expand_dims('geometry')
+    # data2 = data2.expand_dims('height')
+
+    # vars1 = list(data2.variables)
+    # param = [p for p in vars1 if 'dataset_id' in data2[p].attrs][0]
+    # param_attrs = data2[param].attrs
+
+    # if 'result_type' in data2[param].attrs:
+    #     _ = data2[param].attrs.pop('result_type')
+    # data2[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
+
+    # params = [param]
+    # if 'ancillary_variables' in param_attrs:
+    #     params.extend(param_attrs['ancillary_variables'].split(' '))
+
+    # for p in params:
+    #     data2[p] = data2[p].expand_dims('height')
+
+    data2.attrs.update({'version': 3})
 
     return data2
 
@@ -438,6 +455,11 @@ def convert_results_v3_to_v4(data):
     vars1 = list(data.variables)
     param = [p for p in vars1 if 'dataset_id' in data[p].attrs][0]
     param_attrs = data[param].attrs
+
+    if 'result_type' in param_attrs:
+        _ = data[param].attrs.pop('result_type')
+        data[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
+
     sd_attr = param_attrs.pop('spatial_distribution')
 
     if sd_attr == 'sparse':

@@ -13,8 +13,8 @@ import orjson
 from datetime import datetime
 import copy
 from multiprocessing.pool import ThreadPool
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
-# from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
+# from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
+from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
 from typing import Optional, List, Any, Union
 from enum import Enum
 import tethys_data_models as tdm
@@ -29,9 +29,6 @@ pd.options.display.max_columns = 10
 
 ##############################################
 ### Class
-
-# class Output(str, Enum):
-#     zstd = 'zstd'
 
 
 class Tethys(object):
@@ -413,11 +410,12 @@ class Tethys(object):
 
         ## Convert to new version
         attrs = xr3.attrs.copy()
-        if 'version' not in attrs:
+        dims = list(xr3.coords.dims)
+        if ('version' not in attrs) or (len(dims) < 3):
             xr3 = convert_results_v2_to_v3(xr3)
-        else:
-            if attrs['version'] == 3:
-                xr3 = convert_results_v3_to_v4(xr3)
+
+        if attrs['version'] == 3:
+            xr3 = convert_results_v3_to_v4(xr3)
 
         ## Extra spatial query if data are stored in blocks
         if ('station_geometry' in xr3) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
