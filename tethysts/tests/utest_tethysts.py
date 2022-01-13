@@ -30,7 +30,7 @@ remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys
 remote = {'bucket': 'es-hilltop', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'niwa-cliflo', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 2}
-remote = {'bucket': 'nz-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz'}
+remote = {'bucket': 'point-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
 remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'tethysts', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
@@ -46,6 +46,9 @@ remote = remotes_list[-1]
 # station_id2 = 'fe9a63fae6f7fe58474bb3c0'
 # station_id = '6b75a7fb1453ef94148bda19'
 # station_ids = [station_id, '5d06c5a8065a26b51c19b241']
+dataset_id = 'dddb02cd5cb7ae191311ab19'
+station_ids = ['fedeb59e6c7f47597a7d47c7', 'fe9a63fae6f7fe58474bb3c0']
+
 dataset_id='0b2bd62cc42f3096136f11e9'
 station_id='e0c38cc6fd3eb51fb553d45a'
 
@@ -62,8 +65,8 @@ station_ids = [station_id, '9f3ee54af239b845241f8f13']
 dataset_id = '38138ea1c3350031d1b217f6'
 station_id = 'b318207aa246e7bbbd74cb19'
 
-dataset_id = '4ae05d099af292fec48792ec'
-station_id = 'dfb66ed0f4835161a7001d45'
+dataset_id = 'f56892eb59d12cfbc02acceb'
+station_id = 'f4da7cc7f4c947b2e6b30344'
 
 dataset_id = 'fb77f37b16edae3534e73ddd'
 station_id = 'fd60b5bafe19d6b243dda43d'
@@ -87,7 +90,7 @@ station_ids = [station_id, 'fe35e6509703baebf294c59e']
 dataset_id = '2c004d8366bcc22927d68994'
 station_id = '673d6d9fca3ccf38fa009ad1'
 
-dataset_id = 'f27574a7b38eab5b0bc2b3d7'
+dataset_id = 'f27574a7b38eab5b0bc2b3d7' # envlib
 station_id = 'fedeb59e6c7f47597a7d47c7'
 
 dataset_id = 'de3bff8e3c3a2ad9200d8684'
@@ -104,6 +107,13 @@ station_id = '5d06c5a8065a26b51c19b241'
 
 dataset_id = '0a1583c61202c6791ae39e63'
 
+dataset_id = '692e8696cc9e11b4a1ef943d'
+
+dataset_id = '799329b9023c9d9980abd1f6'
+station_id = '937f2bb85e82347746fe1be9'
+
+dataset_id = '4f5945540c2391967b550cc6'
+station_id = '4db28a9db0cb036507490887'
 #
 #
 self = Tethys([remote])
@@ -126,8 +136,11 @@ data2 = self.get_results(dataset_id, station_id2, output='DataArray')
 
 run_dates1 = self.get_run_dates(dataset_id, station_id)
 
-station_ids = [s['station_id'] for s in stn_list1]
+station_ids = [s['station_id'] for s in stn_list1[111:160]]
 data2 = self.get_bulk_results(dataset_id, station_ids, output='Dataset', threads=10)
+
+station_ids = [s['station_id'] for s in stn_list1[100:130]]
+data3 = self.get_bulk_results(dataset_id, station_ids, output='Dataset', threads=10)
 
 # dataset_id = 'f4cfb5a362707785dd39ff85'
 # station_id = 'ff4213c61878e098e07df513'
@@ -180,22 +193,6 @@ sdf = pd.DataFrame(geo1)
 sdf2 = gpd.GeoDataFrame(sdf[['station_id']], geometry=sdf['geo'])
 sdf2['x'] = sdf2.geometry.x.round(1)
 sdf2['y'] = sdf2.geometry.y.round(1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

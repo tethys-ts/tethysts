@@ -27,27 +27,7 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Reference objects
 
-key_patterns = {2: {
-                    'results': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/results.nc.zst',
-                    'datasets': 'tethys/v2/datasets.json.zst',
-                    'stations': 'tethys/v2/{dataset_id}/stations.json.zst',
-                    'station': 'tethys/v2/{dataset_id}/{station_id}/station.json.zst',
-                    'dataset': 'tethys/v2/{dataset_id}/dataset.json.zst',
-                    'results_object_keys': 'tethys/v2/{dataset_id}/results_object_keys.json.zst'
-                    },
-                3: {
-                    'results': 'tethys/v3/{dataset_id}/{station_id}/{run_date}.results.nc.zst',
-                    'datasets': 'tethys/v3.datasets.json.zst',
-                    'stations': 'tethys/v3/{dataset_id}.stations.json.zst',
-                    'station': 'tethys/v3/{dataset_id}/{station_id}.station.json.zst',
-                    'dataset': 'tethys/v3/{dataset_id}.dataset.json.zst',
-                    'results_object_keys': 'tethys/v3/{dataset_id}.results_object_keys.json.zst'
-                    }
-                }
-
-
 b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'
-# public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/v2/public_remotes.json.zst'
 public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/public_remotes.json.zst'
 
 ##############################################
@@ -314,11 +294,11 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
                     raise ValueError('compression option can only be zstd or None')
             break
         except:
-            print(traceback.format_exc())
+            # print(traceback.format_exc())
             if counter1 == 0:
                 raise ValueError('Could not properly extract the object after several tries')
             else:
-                print('Could not properly extract the object; trying again in 5 seconds')
+                # print('Could not properly extract the object; trying again in 5 seconds')
                 counter1 = counter1 - 1
                 sleep(5)
 
@@ -474,31 +454,3 @@ def convert_results_v3_to_v4(data):
     data.attrs.update({'result_type': result_type, 'version': 4})
 
     return data
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
