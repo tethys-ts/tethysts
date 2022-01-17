@@ -20,6 +20,7 @@ from typing import Optional, List, Any, Union
 from scipy import spatial
 import traceback
 import tethys_data_models as tdm
+import pathlib
 
 pd.options.display.max_columns = 10
 
@@ -229,7 +230,7 @@ def s3_connection(connection_config, max_pool_connections=30):
     return s3
 
 
-def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=5, file_path=None, chunk_size=8192*5):
+def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=5, file_path=None, chunk_size=524288):
     """
     General function to get an object from an S3 bucket.
 
@@ -270,17 +271,21 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
             elif isinstance(connection_config, str):
                 url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
                 if isinstance(file_path, str):
-                    # local_filename = url.split('/')[-1]
-                    # NOTE the stream=True parameter below
+                    file_path1 = pathlib.Path(file_path)
+                    if file_path1.is_dir():
+                        file_name = url.split('/')[-1]
+                        file_path2 = str(file_path1.joinpath(file_name))
+                    else:
+                        file_path2 = file_path
                     with requests.get(url, stream=True) as r:
                         r.raise_for_status()
-                        with open(file_path, 'wb') as f:
+                        with open(file_path2, 'wb') as f:
                             for chunk in r.iter_content(chunk_size=chunk_size):
                                 # If you have chunk encoded response uncomment if
                                 # and set chunk_size parameter to None.
                                 #if chunk:
                                 f.write(chunk)
-                    ts_obj = None
+                    ts_obj = file_path2
                 else:
                     resp = requests.get(url)
                     resp.raise_for_status()
