@@ -114,6 +114,9 @@ station_id = '937f2bb85e82347746fe1be9'
 
 dataset_id = '4f5945540c2391967b550cc6'
 station_id = '4db28a9db0cb036507490887'
+
+dataset_id = '0b2bd62cc42f3096136f11e9'
+station_id = '71cd89d47beb79712903eb10'
 #
 #
 self = Tethys([remote])
@@ -193,10 +196,6 @@ sdf = pd.DataFrame(geo1)
 sdf2 = gpd.GeoDataFrame(sdf[['station_id']], geometry=sdf['geo'])
 sdf2['x'] = sdf2.geometry.x.round(1)
 sdf2['y'] = sdf2.geometry.y.round(1)
-
-
-
-
 
 
 

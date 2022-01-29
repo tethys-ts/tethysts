@@ -2,6 +2,8 @@
 
 
 """
+from io import BytesIO, SEEK_SET, SEEK_END, DEFAULT_BUFFER_SIZE
+import os
 import numpy as np
 import requests
 import xarray as xr
@@ -21,6 +23,8 @@ from scipy import spatial
 import traceback
 import tethys_data_models as tdm
 import pathlib
+from functools import partial
+from pydantic import HttpUrl
 
 pd.options.display.max_columns = 10
 
@@ -33,6 +37,52 @@ public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/public_remote
 
 ##############################################
 ### Helper functions
+
+
+class ResponseStream(object):
+    """
+    In many applications, you'd like to access a requests response as a file-like object, simply having .read(), .seek(), and .tell() as normal. Especially when you only want to partially download a file, it'd be extra convenient if you could use a normal file interface for it, loading as needed.
+
+This is a wrapper class for doing that. Only bytes you request will be loaded - see the example in the gist itself.
+
+https://gist.github.com/obskyr/b9d4b4223e7eaf4eedcd9defabb34f13
+    """
+    def __init__(self, request_iterator):
+        self._bytes = BytesIO()
+        self._iterator = request_iterator
+
+    def _load_all(self):
+        self._bytes.seek(0, SEEK_END)
+        for chunk in self._iterator:
+            self._bytes.write(chunk)
+
+    def _load_until(self, goal_position):
+        current_position = self._bytes.seek(0, SEEK_END)
+        while current_position < goal_position:
+            try:
+                current_position += self._bytes.write(next(self._iterator))
+            except StopIteration:
+                break
+
+    def tell(self):
+        return self._bytes.tell()
+
+    def read(self, size=None):
+        left_off_at = self._bytes.tell()
+        if size is None:
+            self._load_all()
+        else:
+            goal_position = left_off_at + size
+            self._load_until(goal_position)
+
+        self._bytes.seek(left_off_at)
+        return self._bytes.read(size)
+
+    def seek(self, position, whence=SEEK_SET):
+        if whence == SEEK_END:
+            self._load_all()
+        else:
+            self._bytes.seek(position, whence)
 
 
 def cartesian_product(*arrays):
@@ -194,9 +244,9 @@ def read_json_zstd(obj):
     return dict1
 
 
-def s3_connection(connection_config, max_pool_connections=30):
+def s3_client(connection_config: dict, max_pool_connections: int = 30):
     """
-    Function to establish a connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
+    Function to establish a client connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
 
     Parameters
     ----------
@@ -230,26 +280,24 @@ def s3_connection(connection_config, max_pool_connections=30):
     return s3
 
 
-def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=5, file_path=None, chunk_size=524288):
+def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl=None, counter=5):
     """
-    General function to get an object from an S3 bucket.
+    General function to get an object from an S3 bucket. One of s3, connection_config, or public_url must be used.
 
     Parameters
     ----------
     obj_key : str
         The object key in the S3 bucket.
+    s3 : botocore.client.BaseClient
+        An S3 object created via the s3_client function.
     connection_config : dict
-        A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
+        A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+    public_url : str
+        A URL to a public S3 bucket. This is generally only used for Backblaze object storage.
     bucket : str
         The bucket name.
-    compression : None or str
-        The compression of the object that should be decompressed. Options include zstd.
     counter : int
         Number of times to retry to get the object.
-    file_path : str or None
-        If file_path is a str path, then the object will be saved to disk instead of held in memory. The default of None will not save it to disk.
-    chunk_size : int
-        The chunk size in bytes to iteratively save to disk. Only relevant if file_path is a str path.
 
     Returns
     -------
@@ -259,49 +307,34 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
     counter1 = counter
     while True:
         try:
-            if isinstance(connection_config, dict):
-                ## Validate config
-                _ = tdm.base.ConnectionConfig(**connection_config)
+            if isinstance(public_url, str):
+                url = b2_public_key_pattern.format(base_url=public_url, bucket=bucket, obj_key=obj_key)
+                resp = requests.get(url)
+                resp.raise_for_status()
 
-                s3 = s3_connection(connection_config)
+                ts_obj = resp.content
 
+            elif isinstance(s3, botocore.client.BaseClient):
                 ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
                 ts_obj = ts_resp.pop('Body').read()
 
-            elif isinstance(connection_config, str):
-                url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
-                if isinstance(file_path, str):
-                    file_path1 = pathlib.Path(file_path)
-                    if file_path1.is_dir():
-                        file_name = url.split('/')[-1]
-                        file_path2 = str(file_path1.joinpath(file_name))
-                    else:
-                        file_path2 = file_path
-                    with requests.get(url, stream=True) as r:
-                        r.raise_for_status()
-                        with open(file_path2, 'wb') as f:
-                            for chunk in r.iter_content(chunk_size=chunk_size):
-                                # If you have chunk encoded response uncomment if
-                                # and set chunk_size parameter to None.
-                                #if chunk:
-                                f.write(chunk)
-                    ts_obj = file_path2
-                else:
-                    resp = requests.get(url)
-                    resp.raise_for_status()
+            elif isinstance(connection_config, dict):
+                ## Validate config
+                _ = tdm.base.ConnectionConfig(**connection_config)
 
-                    ts_obj = resp.content
+                s3 = s3_client(connection_config)
 
-            if isinstance(compression, str):
-                if compression == 'zstd':
-                    ts_obj = read_pkl_zstd(ts_obj, False)
-                else:
-                    raise ValueError('compression option can only be zstd or None')
+                ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
+                ts_obj = ts_resp.pop('Body').read()
+            else:
+                raise TypeError('One of s3, connection_config, or public_url needs to be correctly defined.')
             break
         except:
             # print(traceback.format_exc())
             if counter1 == 0:
-                raise ValueError('Could not properly extract the object after several tries')
+                # raise ValueError('Could not properly download the object after several tries')
+                print('Could not properly download the object after several tries')
+                return None
             else:
                 # print('Could not properly extract the object; trying again in 5 seconds')
                 counter1 = counter1 - 1
@@ -459,3 +492,77 @@ def convert_results_v3_to_v4(data):
     data.attrs.update({'result_type': result_type, 'version': 4})
 
     return data
+
+
+# def read_in_chunks(file_object, chunk_size=524288):
+#     while True:
+#         data = file_object.read(chunk_size)
+#         if not data:
+#             break
+#         yield data
+
+
+def local_file_byte_iterator(path, chunk_size=DEFAULT_BUFFER_SIZE):
+    """given a path, return an iterator over the file
+    that lazily loads the file.
+    https://stackoverflow.com/a/37222446/6952674
+    """
+    path = pathlib.Path(path)
+    with path.open('rb') as file:
+        reader = partial(file.read1, DEFAULT_BUFFER_SIZE)
+        file_iterator = iter(reader, bytes())
+        for chunk in file_iterator:
+            yield from chunk
+
+
+# def file_byte_iterator(file, chunk_size=DEFAULT_BUFFER_SIZE):
+#     """given a path, return an iterator over the file
+#     that lazily loads the file.
+#     https://stackoverflow.com/a/37222446/6952674
+#     """
+#     reader = partial(file.read, chunk_size)
+#     file_iterator = iter(reader, bytes())
+#     for chunk in file_iterator:
+#         yield from chunk
+
+
+def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
+    """
+
+    """
+    file_path1 = pathlib.Path(file_path)
+    if file_path1.is_dir():
+        file_name = url.split('/')[-1]
+        file_path2 = str(file_path1.joinpath(file_name))
+    else:
+        file_path2 = file_path
+
+    base_path = os.path.split(file_path2)[0]
+    os.makedirs(base_path, exist_ok=True)
+
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        stream = ResponseStream(r.iter_content(chunk_size))
+
+        with open(file_path2, 'wb') as f:
+            if compression == 'zstd':
+                if file_path2.endswith('.zst'):
+                    file_path2 = os.path.splitext(file_path2)[0]
+                dctx = zstd.ZstdDecompressor()
+                dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
+            else:
+                chunk = stream.read(chunk_size)
+                while chunk:
+                    f.write(chunk)
+                    chunk = stream.read(chunk_size)
+
+    return file_path2
+
+
+
+
+
+
+
+
+
