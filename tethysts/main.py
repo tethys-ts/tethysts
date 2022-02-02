@@ -12,12 +12,16 @@ import orjson
 # import yaml
 from datetime import datetime
 import copy
-from multiprocessing.pool import ThreadPool
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
+# from multiprocessing.pool import ThreadPool
+import concurrent.futures
+import multiprocessing as mp
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
 from typing import Optional, List, Any, Union
 from enum import Enum
 import tethys_data_models as tdm
+import botocore
+from pydantic import HttpUrl
 
 pd.options.display.max_columns = 10
 
@@ -60,9 +64,10 @@ class Tethys(object):
         setattr(self, '_datasets', {})
         setattr(self, '_remotes', {})
         setattr(self, '_stations', {})
-        setattr(self, '_key_patterns', key_patterns)
+        setattr(self, '_key_patterns', tdm.utils.key_patterns)
         setattr(self, '_results', {})
-        setattr(self, '_results_obj_keys', {})
+        setattr(self, '_results_versions', {})
+        setattr(self, '_results_chunks', {})
 
         if isinstance(remotes, list):
             _ = self.get_datasets(remotes)
@@ -102,10 +107,14 @@ class Tethys(object):
             of datasets
         """
         ## Validate remotes
-        for remote in remotes:
-            _ = tdm.base.Remote(**remote)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            futures = []
+            for remote in remotes:
+                _ = tdm.base.Remote(**remote)
+                f = executor.submit(self.get_remote_datasets, remote)
+                futures.append(f)
+            _ = concurrent.futures.wait(futures)
 
-        _ = ThreadPool(threads).map(self.get_remote_datasets, remotes)
         setattr(self, 'remotes', remotes)
 
         return self.datasets
@@ -131,21 +140,23 @@ class Tethys(object):
         -------
         None
         """
-        if 'version' in remote:
-            version = remote['version']
-        else:
-            version = 2
-
         try:
-            ds_obj = get_object_s3(self._key_patterns[version]['datasets'], remote['connection_config'], remote['bucket'])
+            get_dict = copy.deepcopy(remote)
+
+            if 'version' in get_dict:
+                version = get_dict.pop('version')
+            else:
+                version = 2
+
+            get_dict['obj_key'] = self._key_patterns[version]['datasets']
+            ds_obj = get_object_s3(**get_dict)
             ds_list = read_json_zstd(ds_obj)
 
-            ds_list2 = copy.deepcopy(ds_list)
             # [l.pop('properties') for l in ds_list2]
-            self.datasets.extend(ds_list2)
+            self.datasets.extend(ds_list)
 
             ds_dict = {d['dataset_id']: d for d in ds_list}
-            remote_dict = {d: {'dataset_id': d, 'bucket': remote['bucket'], 'connection_config': remote['connection_config'], 'version': version} for d in ds_dict}
+            remote_dict = {d: remote for d in ds_dict}
 
             self._datasets.update(ds_dict)
             self._remotes.update(remote_dict)
@@ -222,30 +233,42 @@ class Tethys(object):
         return stn_list1
 
 
-    def _get_obj_keys(self, dataset_id: str):
+    def _get_chunks_versions(self, dataset_id: str):
         """
 
         """
-        if dataset_id in self._results_obj_keys:
-            obj_keys = self._results_obj_keys[dataset_id]
+        if 'system_version' in self._datasets[dataset_id]:
+            remote = copy.deepcopy(self._remotes[dataset_id])
+            version = remote.pop('version')
+
+            rv_key = self._key_patterns[version]['results_versions'].format(dataset_id=dataset_id)
+            remote['obj_key'] = rv_key
+
+            rv_obj = get_object_s3(**remote)
+            rv_list = read_json_zstd(rv_obj)
+
+            results_versions = rv_list['results_versions']
+
+            results_chunks = {}
+            for s in rv_list['results_chunks']:
+                stn_id = s['station_id']
+                s['version_date'] = pd.Timestamp(s['version_date']).tz_localize(None)
+                if stn_id in results_chunks:
+                    results_chunks[stn_id].append(s)
+                else:
+                    results_chunks[stn_id] = [s]
+
+            self._results_versions[dataset_id] = results_versions
+            self._results_chunks[dataset_id] = results_chunks
         else:
-            if 'version' in self._datasets[dataset_id]:
-                remote = self._remotes[dataset_id]
+            raise NotImplementedError('I need to update this for the previous versions.')
+            # _ = self.get_stations(dataset_id)
+            # obj_keys = self._results_obj_keys[dataset_id]
 
-                ro_key = self._key_patterns[remote['version']]['results_object_keys'].format(dataset_id=dataset_id)
-                ro_obj = get_object_s3(ro_key, remote['connection_config'], remote['bucket'])
-                ro_list = read_json_zstd(ro_obj)
-
-                obj_keys = {s['station_id']: s['results_object_key'] for s in ro_list}
-                self._results_obj_keys.update({dataset_id: copy.deepcopy(obj_keys)})
-            else:
-                _ = self.get_stations(dataset_id)
-                obj_keys = self._results_obj_keys[dataset_id]
-
-        return obj_keys
+        return results_versions, results_chunks
 
 
-    def get_run_dates(self, dataset_id: str, station_id: str):
+    def get_results_versions(self, dataset_id: str, station_id: str):
         """
         Function to get the run dates of a particular dataset and station.
 
@@ -260,63 +283,46 @@ class Tethys(object):
         -------
         list
         """
-        res_obj_keys = self._get_obj_keys(dataset_id)
-
-        obj_keys = res_obj_keys[station_id]
-
-        run_dates = np.unique([ob['run_date'].split('+')[0] if '+' in ob['run_date'] else ob['run_date'] for ob in obj_keys]).tolist()
-
-        return run_dates
-
-
-    def _get_results_obj_key_s3(self, dataset_id: str, station_id: str, run_date: Union[str, pd.Timestamp]):
-        """
-
-        """
-        if isinstance(run_date, (str, pd.Timestamp)):
-            res_obj_keys = self._get_obj_keys(dataset_id)
-
-            obj_keys = res_obj_keys[station_id]
-
-            obj_keys_df = pd.DataFrame(obj_keys)
-            obj_keys_df['run_date'] = pd.to_datetime(obj_keys_df['run_date']).dt.tz_localize(None)
-
-            run_date1 = pd.Timestamp(run_date)
-
-            obj_key_df = obj_keys_df[obj_keys_df['run_date'] == run_date1]
-
-            if obj_key_df.empty:
-                raise ValueError('Requested run_date is not available, run the get_run_dates method.')
-            else:
-                obj_key = obj_key_df['key'].iloc[0]
-
+        if dataset_id not in self._results_versions:
+            results_versions, results_chunks = self._get_chunks_versions(dataset_id)
         else:
-            if dataset_id not in self._stations:
-                _ = self.get_stations(dataset_id)
+            results_versions = self._results_versions[dataset_id]
 
-            stn = self._stations[dataset_id][station_id]
+        return results_versions
 
-            obj_key = stn['results_object_key']['key']
 
-        return obj_key
+    def _get_results_chunks(self, dataset_id: str, station_id: str, time_interval: int, version_date: Union[str, pd.Timestamp] = None, from_date=None, to_date=None, heights=None, bands=None):
+        """
+
+        """
+        if dataset_id not in self._results_chunks:
+            results_versions, results_chunks = self._get_chunks_versions(dataset_id)
+            chunks1 = chunk_filters(results_chunks, time_interval, version_date, from_date, to_date, heights, bands)
+        else:
+            chunks1 = chunk_filters(self._results_chunks[dataset_id], time_interval, version_date, from_date, to_date, heights, bands)
+
+        return chunks1
 
 
     def get_results(self,
                     dataset_id: str,
-                    station_id: Optional[str] = None,
-                    geometry: Optional[dict] = None,
-                    lat: Optional[float] = None,
-                    lon: Optional[float] = None,
-                    from_date: Union[str, pd.Timestamp, datetime, None] = None,
-                    to_date: Union[str, pd.Timestamp, datetime, None] = None,
-                    from_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
-                    to_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
-                    modified_date: Union[str, pd.Timestamp, datetime, None] = None,
-                    quality_code: Optional[bool] = False,
-                    run_date: Union[str, pd.Timestamp, datetime, None] = None,
-                    squeeze_dims: Optional[bool] = False,
+                    station_ids: Union[str, List[str]] = None,
+                    geometry: dict = None,
+                    lat: float = None,
+                    lon: float = None,
+                    from_date: Union[str, pd.Timestamp, datetime] = None,
+                    to_date: Union[str, pd.Timestamp, datetime] = None,
+                    from_mod_date: Union[str, pd.Timestamp, datetime] = None,
+                    to_mod_date: Union[str, pd.Timestamp, datetime] = None,
+                    # modified_date: Union[str, pd.Timestamp, datetime, None] = None,
+                    # quality_code: Optional[bool] = False,
+                    version_date: Union[str, pd.Timestamp, datetime] = None,
+                    heights: Union[int, float] = None,
+                    bands: int = None,
+                    squeeze_dims: bool = False,
                     output: str = 'Dataset',
-                    cache: Optional[str] = None):
+                    cache: str = None,
+                    threads: int = 20):
         """
         Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
 
@@ -365,15 +371,19 @@ class Tethys(object):
         ## Get parameters
         dataset = self._datasets[dataset_id]
         parameter = dataset['parameter']
-        remote = self._remotes[dataset_id]
+        remote = copy.deepcopy(self._remotes[dataset_id])
+        version = remote.pop('version')
+        time_interval = int(dataset['chunk_parameters']['time_interval'])
 
         if isinstance(geometry, dict):
             geom_type = geometry['type']
         else:
             geom_type = None
 
-        if isinstance(station_id, str):
-            stn_id = station_id
+        if isinstance(station_ids, str):
+            stn_ids = [station_ids]
+        elif isinstance(station_ids, list):
+            stn_ids = station_ids
         elif ((geom_type in ['Point', 'Polygon']) or (isinstance(lat, float) and isinstance(lon, float))):
             ## Get all stations
             if dataset_id not in self._stations:
@@ -382,28 +392,55 @@ class Tethys(object):
             stn_dict = self._stations[dataset_id]
 
             # Run the spatial query
-            stn_id = spatial_query(stn_dict, geometry, lat, lon)[0]
+            stn_ids = spatial_query(stn_dict, geometry, lat, lon)
         else:
             raise ValueError('A station_id, geometry or a combination of lat and lon must be passed.')
 
-        ## Get object key
-        obj_key = self._get_results_obj_key_s3(dataset_id, stn_id, run_date)
+        ## Get results chunks
+        chunk_keys = []
+        extend = chunk_keys.extend
+        for stn_id in stn_ids:
+            c1 = self._get_results_chunks(dataset_id, stn_id, time_interval, version_date, from_date, to_date, heights, bands)
+            extend([c['key'] for c in c1])
 
-        ## Get results
-        if obj_key in self._results:
-            ts_obj = self._results[obj_key]
-        else:
-            ts_obj = get_object_s3(obj_key, remote['connection_config'], remote['bucket'])
+
+        # with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+        #     futures = []
+        #     for stn_id in stn_ids:
+        #         f = executor.submit(self._get_results_chunks, dataset_id, stn_id, time_interval, version_date, from_date, to_date, heights, bands)
+        #         futures.append(f)
+        #     runs = concurrent.futures.wait(futures)
+
+        # chunk_keys1 = [r.result() for r in runs[0]]
+        # chunk_keys = []
+        # extend = chunk_keys.extend
+        # for chunk in chunk_keys1:
+        #     extend([c['key'] for c in chunk])
+
+        chunk_keys.sort()
+
+        ## Get results chunks
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            futures = []
+            for key in chunk_keys:
+                remote['obj_key'] = key
+                f = executor.submit(get_object_s3, **remote)
+                futures.append(f)
+            runs = concurrent.futures.wait(futures)
+
+        chunks1 = [r.result() for r in runs[0]]
+
+        # TODO: still need to finish this and add caching
 
         # cache results if requested
-        if cache == 'memory':
-            if obj_key in self._results:
-                new_len = len(ts_obj)
-                old_len = len(self._results[obj_key])
-                if new_len != old_len:
-                    self._results[obj_key] = ts_obj
-            else:
-                self._results[obj_key] = ts_obj
+        # if cache == 'memory':
+        #     if obj_key in self._results:
+        #         new_len = len(ts_obj)
+        #         old_len = len(self._results[obj_key])
+        #         if new_len != old_len:
+        #             self._results[obj_key] = ts_obj
+        #     else:
+        #         self._results[obj_key] = ts_obj
 
         # Open results
         xr3 = xr.open_dataset(read_pkl_zstd(ts_obj))

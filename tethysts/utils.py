@@ -333,7 +333,7 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
             # print(traceback.format_exc())
             if counter1 == 0:
                 # raise ValueError('Could not properly download the object after several tries')
-                print('Could not properly download the object after several tries')
+                print('Object could not be downloaded.')
                 return None
             else:
                 # print('Could not properly extract the object; trying again in 5 seconds')
@@ -341,6 +341,54 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
                 sleep(5)
 
     return ts_obj
+
+
+def chunk_filters(results_chunks, time_interval, version_date=None, from_date=None, to_date=None, heights=None, bands=None):
+    """
+
+    """
+    ## Get the chunks associated with a specific version
+    if isinstance(version_date, (str, pd.Timestamp, datetime)):
+        vd1 = pd.Timestamp(version_date)
+    else:
+        vd1 = pd.Timestamp.now(tz='UTC').round('s').tz_localize(None)
+
+    rc1 = {}
+    for rc in results_chunks:
+        if rc['version_date'] <= vd1:
+            rc1[rc['chunk_id']] = rc
+
+    rc2 = list(rc1.values())
+
+    ## Temporal filter
+    if isinstance(from_date, (str, pd.Timestamp, datetime)):
+        from_date1 = int(pd.Timestamp(from_date).timestamp()/60/60/24)
+        rc2 = [rc for rc in rc2 if (rc['chunk_day'] + time_interval) >= from_date1]
+
+    if isinstance(to_date, (str, pd.Timestamp, datetime)):
+        to_date1 = int(pd.Timestamp(to_date).timestamp()/60/60/24)
+        rc2 = [rc for rc in rc2 if rc['chunk_day'] <= to_date1]
+
+    ## Heights and bands filter
+    if heights is not None:
+        if isinstance(heights, (int, float)):
+            h1 = [int(heights*1000)]
+        elif isinstance(heights, list):
+            h1 = [int(h*1000) for h in heights]
+        else:
+            raise TypeError('heights must be an int, float, or list of int/float.')
+        rc2 = [rc for rc in rc2 if rc['height'] in h1]
+
+    if bands is not None:
+        if isinstance(bands, int):
+            b1 = [heights]
+        elif isinstance(bands, list):
+            b1 = [int(b) for b in bands]
+        else:
+            raise TypeError('bands must be an int or list of int.')
+        rc2 = [rc for rc in rc2 if rc['band'] in b1]
+
+    return rc2
 
 
 def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None):
