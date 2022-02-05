@@ -35,6 +35,8 @@ pd.options.display.max_columns = 10
 b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'
 public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/public_remotes.json.zst'
 
+local_results_name = '{ds_id}/{stn_id}/{chunk_id}.{version_date}.{chunk_hash}.nc'
+
 ##############################################
 ### Helper functions
 
@@ -425,7 +427,7 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
     return ts_xr1
 
 
-def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False):
+def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False, include_chunk_vars: bool = False):
     """
 
     """
@@ -441,6 +443,10 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
 
     if len(out_param) == 1:
         out_param = out_param[0]
+
+    if not include_chunk_vars:
+        chunk_vars = [v for v in list(ts_xr.variables) if 'chunk' in v]
+        ts_xr = ts_xr.drop(chunk_vars)
 
     ## Return
     if squeeze_dims:
@@ -594,7 +600,7 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
 
         with open(file_path2, 'wb') as f:
             if compression == 'zstd':
-                if file_path2.endswith('.zst'):
+                if str(file_path2).endswith('.zst'):
                     file_path2 = os.path.splitext(file_path2)[0]
                 dctx = zstd.ZstdDecompressor()
                 dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
@@ -605,6 +611,95 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
                     chunk = stream.read(chunk_size)
 
     return file_path2
+
+
+def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None):
+    """
+
+    """
+    if isinstance(cache, pathlib.Path):
+        chunk_hash = chunk['chunk_hash']
+        version_date = chunk['version_date'].strftime('%Y%m%d%H%M%SZ')
+        results_file_name = local_results_name.format(ds_id=chunk['dataset_id'], stn_id=chunk['station_id'], chunk_id=chunk['chunk_id'], version_date=version_date, chunk_hash=chunk_hash)
+        chunk_path = cache.joinpath(results_file_name)
+        chunk_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not chunk_path.exists():
+            if public_url is not None:
+                url = b2_public_key_pattern.format(base_url=public_url, bucket=bucket, obj_key=chunk['key'])
+                _ = url_stream_to_file(url, chunk_path, compression='zstd')
+            else:
+                obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
+                with open(chunk_path, 'wb') as f:
+                    f.write(obj1)
+                del obj1
+
+        return chunk_path
+
+    else:
+        obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
+        obj2 = xr.load_dataset(read_pkl_zstd(obj1))
+        del obj1
+
+        return obj2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -198,15 +198,40 @@ sdf2 = gpd.GeoDataFrame(sdf[['station_id']], geometry=sdf['geo'])
 sdf2['x'] = sdf2.geometry.x.round(1)
 sdf2['y'] = sdf2.geometry.y.round(1)
 
+#####################################################
+## dev testing
 
+geometry: dict = None
+lat: float = None
+lon: float = None
+from_date: Union[str, pd.Timestamp, datetime] = None
+to_date: Union[str, pd.Timestamp, datetime] = None
+from_mod_date: Union[str, pd.Timestamp, datetime] = None
+to_mod_date: Union[str, pd.Timestamp, datetime] = None
+version_date: Union[str, pd.Timestamp, datetime] = None
+heights: Union[int, float] = None
+bands: int = None
+squeeze_dims: bool = False
+output: str = 'Dataset'
+threads: int = 20
+include_chunk_vars: bool = False
 
+remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 4}
 
+cache = '/media/nvme1/cache/tethys'
 
+dataset_id = '469b6a9ef620bce70fab5760'
+station_ids = '80ede07567c4d7cdd00b0954'
 
+self = Tethys([remote], cache=cache)
+# self = Tethys([remote])
 
+rv1 = self.get_results_versions(dataset_id)
+stns1 = self.get_stations(dataset_id)
 
+station_ids = [s['station_id'] for s in stns1[:10]]
 
-
+results1 = self.get_results(dataset_id, station_ids, heights=[10, 20])
 
 
 
