@@ -348,8 +348,6 @@ class Tethys(object):
                     to_date: Union[str, pd.Timestamp, datetime] = None,
                     from_mod_date: Union[str, pd.Timestamp, datetime] = None,
                     to_mod_date: Union[str, pd.Timestamp, datetime] = None,
-                    # modified_date: Union[str, pd.Timestamp, datetime, None] = None,
-                    # quality_code: Optional[bool] = False,
                     version_date: Union[str, pd.Timestamp, datetime] = None,
                     heights: Union[List[Union[int, float]], Union[int, float]] = None,
                     bands: Union[List[int], int] = None,
@@ -454,40 +452,74 @@ class Tethys(object):
 
         # Open results
         # TODO: definitely not happy with the performance of combining datasets
-        # The only real way to improve the merging performance is to group the datasets by dimensions and combine those first, then combine the results of the groups.
+        # One way to improve the merging performance is to group the datasets by dimensions and combine those first, then combine the results of the groups.
+        # Another way would be to create a dataset with all nans with the final structure beforehand, then slicing the data in iteratively. This is probably the best option...
 
         tot = 0
         if isinstance(chunks1[0], pathlib.Path):
+            # blank1 = xr.open_mfdataset(chunks1, combine='nested', compat="no_conflicts", engine='scipy')
+
+            # data_vars = set(blank1.data_vars)
+            # blank1['wind_speed'] = xr.full_like(blank1['wind_speed'], np.nan, blank1['wind_speed'].dtype)
+            # blank1.load()
+            # blank = blank1.copy()
+
+            # coords_list = list(blank.coords)
+            # dims_list = list(blank.dims)
+
+            # # for d in data_vars:
+            # #     blank1[d] = xr.full_like(blank1[d],
+
+            # for c in chunks1:
+            #     # print(c)
+            #     t1 = time()
+            #     with xr.load_dataset(c, engine='scipy') as c1:
+            #         # c2 = c1.transpose(*dims_list).copy()
+
+            #         # blank.loc[dict(lon=c2.lon, lat=c2.lat, height=c2.height, time=c2.time)]['wind_speed'] = c1['wind_speed']
+            #         # blank['wind_speed'] = xr.where(blank1['wind_speed'].loc[dict(lon=c1.lon, lat=c1.lat, height=c1.height, time=c1.time)], c1['wind_speed'], np.nan)
+            #         # blank = xr.where(blank.lon.isin(c1.lon) & blank.lat.isin(c1.lat) & blank.height.isin(c1.height) & blank.time.isin(c1.time) & blank.station_geometry.isin(c1.station_geometry) & blank.chunk_date.isin(c1.chunk_date), blank, c1)
+                    # blank.loc[dict(lon=c2.lon, lat=c2.lat, station_geometry=c2.station_geometry, chunk_date=c2.chunk_date, height=c2.height, time=c2.time)] = c1
+                    # xr3 = xr3.combine_first(c1)
+            #         # xr3 = xr3.merge(c1, overwrite_vars=data_vars)
+            #         # xr3 = xr3.merge(c1)
+            #         # xr3.update(c1)
+            #     tot1 = time() - t1
+            #     print(tot1)
+            #     tot = tot + tot1
+
             xr3 = xr.load_dataset(chunks1[0])
-            data_vars = set(xr3.data_vars)
+            # data_vars = set(xr3.data_vars)
 
             if len(chunks1) > 1:
                 for c in chunks1[1:]:
                     # print(c)
                     t1 = time()
                     with xr.load_dataset(c, engine='scipy') as c1:
-                        # xr3 = xr3.combine_first(c1)
-                        xr3 = xr3.merge(c1, overwrite_vars=data_vars)
+                        xr3 = xr3.combine_first(c1)
                         # xr3 = xr3.merge(c1)
                         # xr3.update(c1)
                     tot1 = time() - t1
                     print(tot1)
                     tot = tot + tot1
 
-            # xr3 = xr.open_mfdataset(chunks1, combine='nested')
+            # xr3 = xr.open_mfdataset(chunks1, combine='nested', compat='override', engine='scipy')
             # xr3 = xr.combine_by_coords([xr.load_dataset(c) for c in chunks1], data_vars='minimal', coords='minimal')
+            # xr3 = xr.merge([xr.load_dataset(c) for c in chunks1], compat='override')
         else:
             xr3 = chunks1[0]
+            # data_vars = set(xr3.data_vars)
 
             if len(chunks1) > 1:
                 for c in chunks1[1:]:
                     # t1 = time()
-                    # xr3 = xr3.combine_first(c)
-                    xr3 = xr3.merge(c1, overwrite_vars=data_vars)
+                    xr3 = xr3.combine_first(c)
+                    # xr3 = xr3.merge(c)
                     # tot1 = time() - t1
                     # print(tot1)
                     # tot = tot + tot1
             # xr3 = xr.combine_by_coords(chunks1, data_vars='minimal', coords='minimal')
+            # xr3 = xr.merge(chunks1, compat='override')
 
         print(tot)
 
@@ -511,7 +543,7 @@ class Tethys(object):
         #     ts_xr1 = ts_xr1.expand_dims('station_id').set_coords('station_id')
 
         ## Output
-        ts_xr1 = process_results_output(ts_xr1, parameter, modified_date=False, quality_code=False, output=output, squeeze_dims=squeeze_dims)
+        ts_xr1 = process_results_output(ts_xr1, parameter, modified_date=False, quality_code=False, output=output, squeeze_dims=squeeze_dims, include_chunk_vars=include_chunk_vars)
 
         return ts_xr1
 

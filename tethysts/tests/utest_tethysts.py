@@ -231,7 +231,7 @@ stns1 = self.get_stations(dataset_id)
 
 station_ids = [s['station_id'] for s in stns1[:10]]
 
-results1 = self.get_results(dataset_id, station_ids, heights=[10, 20])
+results1 = self.get_results(dataset_id, station_ids, heights=None, include_chunk_vars=True)
 
 
 
