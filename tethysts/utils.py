@@ -634,14 +634,14 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
                     f.write(obj1)
                 del obj1
 
-        return chunk_path
+        return {'station_id': chunk['station_id'], 'chunk': chunk_path}
 
     else:
         obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
         obj2 = xr.load_dataset(read_pkl_zstd(obj1))
         del obj1
 
-        return obj2
+        return {'station_id': chunk['station_id'], 'chunk': obj2}
 
 
 

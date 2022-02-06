@@ -450,13 +450,31 @@ class Tethys(object):
 
         chunks1 = [r.result() for r in runs[0]]
 
+        chunks2 = {}
+        for c in chunks1:
+            stn_id = c['station_id']
+            if stn_id in chunks2:
+                chunks2[stn_id].append(c['chunk'])
+            else:
+                chunks2[stn_id] = [c['chunk']]
+
         # Open results
         # TODO: definitely not happy with the performance of combining datasets
         # One way to improve the merging performance is to group the datasets by dimensions and combine those first, then combine the results of the groups.
-        # Another way would be to create a dataset with all nans with the final structure beforehand, then slicing the data in iteratively. This is probably the best option...
+        # Another way would be to create a dataset with all nans with the final structure beforehand, then slicing the data in iteratively.
 
         tot = 0
-        if isinstance(chunks1[0], pathlib.Path):
+        t1 = time()
+        if isinstance(chunks2[stn_id][0], pathlib.Path):
+            groups1 = []
+            for stn, paths in chunks2.items():
+                xr1 = xr.combine_by_coords([xr.load_dataset(c) for c in paths], data_vars='minimal', coords='minimal')
+                groups1.append(xr1)
+
+            # xr3 = xr.combine_by_coords(groups1, data_vars='minimal', coords='minimal')
+            # tot = time() - t1
+
+
             # blank1 = xr.open_mfdataset(chunks1, combine='nested', compat="no_conflicts", engine='scipy')
 
             # data_vars = set(blank1.data_vars)
@@ -488,20 +506,17 @@ class Tethys(object):
             #     print(tot1)
             #     tot = tot + tot1
 
-            xr3 = xr.load_dataset(chunks1[0])
+            xr3 = groups1[0]
             # data_vars = set(xr3.data_vars)
 
-            if len(chunks1) > 1:
-                for c in chunks1[1:]:
+            if len(groups1) > 1:
+                for c in groups1[1:]:
                     # print(c)
-                    t1 = time()
-                    with xr.load_dataset(c, engine='scipy') as c1:
-                        xr3 = xr3.combine_first(c1)
+                    # t1 = time()
+                    xr3 = xr3.combine_first(c)
                         # xr3 = xr3.merge(c1)
                         # xr3.update(c1)
-                    tot1 = time() - t1
-                    print(tot1)
-                    tot = tot + tot1
+            tot = time() - t1
 
             # xr3 = xr.open_mfdataset(chunks1, combine='nested', compat='override', engine='scipy')
             # xr3 = xr.combine_by_coords([xr.load_dataset(c) for c in chunks1], data_vars='minimal', coords='minimal')

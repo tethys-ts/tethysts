@@ -229,9 +229,9 @@ self = Tethys([remote], cache=cache)
 rv1 = self.get_results_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 
-station_ids = [s['station_id'] for s in stns1[:10]]
+station_ids = [s['station_id'] for s in stns1[:60]]
 
-results1 = self.get_results(dataset_id, station_ids, heights=None, include_chunk_vars=True)
+results1 = self.get_results(dataset_id, station_ids, heights=[10], include_chunk_vars=True)
 
 
 
