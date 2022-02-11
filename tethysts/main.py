@@ -88,7 +88,7 @@ class Tethys(object):
         setattr(self, '_stations', {})
         setattr(self, '_key_patterns', tdm.utils.key_patterns)
         # setattr(self, '_results', {})
-        setattr(self, '_results_versions', {})
+        setattr(self, '_versions', {})
         setattr(self, '_results_chunks', {})
 
         if isinstance(cache, str):
@@ -294,7 +294,7 @@ class Tethys(object):
                 else:
                     results_chunks[stn_id] = [s]
 
-            self._results_versions[dataset_id] = results_versions
+            self._versions[dataset_id] = results_versions
             self._results_chunks[dataset_id] = results_chunks
         else:
             raise NotImplementedError('I need to update this for the previous versions.')
@@ -304,9 +304,9 @@ class Tethys(object):
         return results_versions, results_chunks
 
 
-    def get_results_versions(self, dataset_id: str):
+    def get_versions(self, dataset_id: str):
         """
-        Function to get the run dates of a particular dataset and station.
+        Function to get the versions of a particular dataset.
 
         Parameters
         ----------
@@ -317,10 +317,10 @@ class Tethys(object):
         -------
         list
         """
-        if dataset_id not in self._results_versions:
+        if dataset_id not in self._versions:
             results_versions, results_chunks = self._get_chunks_versions(dataset_id)
         else:
-            results_versions = self._results_versions[dataset_id]
+            results_versions = self._versions[dataset_id]
 
         return results_versions
 
@@ -336,6 +336,50 @@ class Tethys(object):
             chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], time_interval, version_date, from_date, to_date, heights, bands)
 
         return chunks1
+
+
+    def clear_cache(self, max_size=1000, max_age=7):
+        """
+        Clears the cache based on specified max_size and max_age. The cache path must be assigned at the Tethys initialisation for this function to work.
+
+        Parameters
+        ----------
+        max_size: int
+            The total maximum size of all files in the cache in MBs.
+        max_age: int or float
+            The maximum age of files in the cache in days.
+
+        Returns
+        -------
+        None
+        """
+        if not isinstance(self.cache, pathlib.Path):
+            raise TypeError('The cache path must be set when initialising Tethys.')
+
+        cache_gen1 = list(self.cache.rglob('*.nc'))
+
+        stats1 = []
+        for c in cache_gen1:
+            stats = c.stat()
+            stats1.append([str(c), stats.st_size, stats.st_mtime])
+
+        stats2 = pd.DataFrame(stats1, columns=['file_path', 'file_size', 'mtime'])
+        stats2['mtime'] = pd.to_datetime(stats2['mtime'], unit='s').round('s')
+
+        stats2 = stats2.sort_values('mtime')
+        stats2['file_cumsum'] = stats2['file_size'].cumsum()
+
+        now1 = pd.Timestamp.now().round('s')
+        then1 = now1 - pd.DateOffset(days=max_age)
+
+        rem1_bool = stats2['mtime'] < then1
+        rem2_bool = stats2['file_cumsum'] > (max_size*1000000)
+
+        rem_files = stats2[rem1_bool | rem2_bool]['file_path'].tolist()
+
+        if rem_files:
+            for f in rem_files:
+                os.remove(f)
 
 
     def get_results(self,
@@ -357,14 +401,14 @@ class Tethys(object):
                     include_chunk_vars: bool = False
                     ):
         """
-        Function to query the time series data given a specific dataset_id and station_id. Multiple optional outputs.
+        Function to query the results data given a specific dataset_id and station_ids. Multiple optional outputs.
 
         Parameters
         ----------
         dataset_id : str
             The dataset_id of the dataset.
-        station_id : str or None
-            The station_id of the associated station.
+        station_ids : str, list of str, or None
+            The station_ids of the associated station.
         geometry : dict or None
             A geometry in GeoJSON format. Can be either a point or a polygon. If it's a point, then the method will perform a nearest neighbor query and return one station.
         lat : float or None
@@ -463,13 +507,22 @@ class Tethys(object):
         # One way to improve the merging performance is to group the datasets by dimensions and combine those first, then combine the results of the groups.
         # Another way would be to create a dataset with all nans with the final structure beforehand, then slicing the data in iteratively.
 
-        tot = 0
-        t1 = time()
+        # tot = 0
+        # t1 = time()
         if isinstance(chunks2[stn_id][0], pathlib.Path):
+
+            ## Get the encodings because xarray kills them later...
+            temp1 = xr.open_dataset(chunks2[stn_id][0])
+            encoding = {v: temp1[v].encoding for v in list(temp1.variables)}
+            temp1.close()
+            del temp1
+
             groups1 = []
             for stn, paths in chunks2.items():
-                xr1 = xr.combine_by_coords([xr.load_dataset(c) for c in paths], data_vars='minimal', coords='minimal')
+                # xr1 = xr.combine_by_coords([xr.load_dataset(c) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override')
+                xr1 = xr.combine_by_coords([xr.load_dataset(c) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override')
                 groups1.append(xr1)
+
 
             # xr3 = xr.combine_by_coords(groups1, data_vars='minimal', coords='minimal')
             # tot = time() - t1
@@ -516,17 +569,27 @@ class Tethys(object):
                     xr3 = xr3.combine_first(c)
                         # xr3 = xr3.merge(c1)
                         # xr3.update(c1)
-            tot = time() - t1
+
+            # tot = time() - t1
 
             # xr3 = xr.open_mfdataset(chunks1, combine='nested', compat='override', engine='scipy')
             # xr3 = xr.combine_by_coords([xr.load_dataset(c) for c in chunks1], data_vars='minimal', coords='minimal')
             # xr3 = xr.merge([xr.load_dataset(c) for c in chunks1], compat='override')
         else:
-            xr3 = chunks1[0]
+            ## Get the encodings because xarray kills them later...
+            temp1 = chunks2[stn_id][0]
+            encoding = {v: temp1[v].encoding for v in list(temp1.variables)}
+
+            groups1 = []
+            for stn, data in chunks2.items():
+                xr1 = xr.combine_by_coords(data, data_vars='minimal', coords='minimal', combine_attrs='override')
+                groups1.append(xr1)
             # data_vars = set(xr3.data_vars)
 
-            if len(chunks1) > 1:
-                for c in chunks1[1:]:
+            xr3 = groups1[0]
+
+            if len(groups1) > 1:
+                for c in groups1[1:]:
                     # t1 = time()
                     xr3 = xr3.combine_first(c)
                     # xr3 = xr3.merge(c)
@@ -536,16 +599,28 @@ class Tethys(object):
             # xr3 = xr.combine_by_coords(chunks1, data_vars='minimal', coords='minimal')
             # xr3 = xr.merge(chunks1, compat='override')
 
-        print(tot)
+        # print(tot)
+
+        del groups1
+
+        ## Add the encodings back and correct the float that should be int
+        for v, enc in encoding.items():
+            _ = [enc.pop(d) for d in ['original_shape', 'source'] if d in enc]
+            xr3[v].encoding = enc
+
+            dtype = enc['dtype'].name
+
+            if ('int' in dtype) and (not 'scale_factor' in enc) and (not 'calendar' in enc):
+                xr3[v] = xr3[v].astype(dtype)
 
         ## Convert to new version
-        attrs = xr3.attrs.copy()
-        if ('version' not in attrs):
-            xr3 = convert_results_v2_to_v3(xr3)
-            attrs['version'] = 3
+        # attrs = xr3.attrs.copy()
+        # if ('version' not in attrs):
+        #     xr3 = convert_results_v2_to_v3(xr3)
+        #     attrs['version'] = 3
 
-        if attrs['version'] == 3:
-            xr3 = convert_results_v3_to_v4(xr3)
+        # if attrs['version'] == 3:
+        #     xr3 = convert_results_v3_to_v4(xr3)
 
         ## Extra spatial query if data are stored in blocks
         if ('station_geometry' in xr3) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
@@ -553,9 +628,6 @@ class Tethys(object):
 
         ## Filters
         ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date)
-
-        # if not 'station_id' in list(ts_xr1.coords):
-        #     ts_xr1 = ts_xr1.expand_dims('station_id').set_coords('station_id')
 
         ## Output
         ts_xr1 = process_results_output(ts_xr1, parameter, modified_date=False, quality_code=False, output=output, squeeze_dims=squeeze_dims, include_chunk_vars=include_chunk_vars)

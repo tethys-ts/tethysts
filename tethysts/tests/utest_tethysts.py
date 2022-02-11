@@ -220,16 +220,18 @@ remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz', 'version
 
 cache = '/media/nvme1/cache/tethys'
 
-dataset_id = '469b6a9ef620bce70fab5760'
+dataset_id = '444244a03a18cc8711e8cdc7'
 station_ids = '80ede07567c4d7cdd00b0954'
 
 self = Tethys([remote], cache=cache)
 # self = Tethys([remote])
 
-rv1 = self.get_results_versions(dataset_id)
+rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 
-station_ids = [s['station_id'] for s in stns1[:60]]
+station_ids = [s['station_id'] for s in stns1[:10]]
+
+results1 = self.get_results(dataset_id, station_ids, heights=None, include_chunk_vars=True)
 
 results1 = self.get_results(dataset_id, station_ids, heights=[10], include_chunk_vars=True)
 

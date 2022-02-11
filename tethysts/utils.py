@@ -25,6 +25,8 @@ import tethys_data_models as tdm
 import pathlib
 from functools import partial
 from pydantic import HttpUrl
+import shutil
+import gzip
 
 pd.options.display.max_columns = 10
 
@@ -345,7 +347,7 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
     return ts_obj
 
 
-def chunk_filters(results_chunks, time_interval, version_date=None, from_date=None, to_date=None, heights=None, bands=None):
+def chunk_filters(results_chunks, time_interval=None, version_date=None, from_date=None, to_date=None, heights=None, bands=None):
     """
 
     """
@@ -598,13 +600,22 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
         r.raise_for_status()
         stream = ResponseStream(r.iter_content(chunk_size))
 
-        with open(file_path2, 'wb') as f:
-            if compression == 'zstd':
-                if str(file_path2).endswith('.zst'):
-                    file_path2 = os.path.splitext(file_path2)[0]
-                dctx = zstd.ZstdDecompressor()
+        if compression == 'zstd':
+            if str(file_path2).endswith('.zst'):
+                file_path2 = os.path.splitext(file_path2)[0]
+            dctx = zstd.ZstdDecompressor()
+
+            with open(file_path2, 'wb') as f:
                 dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
-            else:
+
+        elif compression == 'gzip':
+            if str(file_path2).endswith('.gz'):
+                file_path2 = os.path.splitext(file_path2)[0]
+
+            with gzip.open(stream, 'rb') as s_file, open(file_path2, 'wb') as d_file:
+                shutil.copyfileobj(s_file, d_file, chunk_size)
+        else:
+            with open(file_path2, 'wb') as f:
                 chunk = stream.read(chunk_size)
                 while chunk:
                     f.write(chunk)
