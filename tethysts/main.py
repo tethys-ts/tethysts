@@ -398,7 +398,7 @@ class Tethys(object):
                     squeeze_dims: bool = False,
                     output: str = 'Dataset',
                     threads: int = 20,
-                    include_chunk_vars: bool = False
+                    # include_chunk_vars: bool = False
                     ):
         """
         Function to query the results data given a specific dataset_id and station_ids. Multiple optional outputs.
@@ -630,7 +630,7 @@ class Tethys(object):
         ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date)
 
         ## Output
-        ts_xr1 = process_results_output(ts_xr1, parameter, modified_date=False, quality_code=False, output=output, squeeze_dims=squeeze_dims, include_chunk_vars=include_chunk_vars)
+        ts_xr1 = process_results_output(ts_xr1, parameter, modified_date=False, quality_code=False, output=output, squeeze_dims=squeeze_dims)
 
         return ts_xr1
 

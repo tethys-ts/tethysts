@@ -429,7 +429,9 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
     return ts_xr1
 
 
-def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False, include_chunk_vars: bool = False):
+def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False, 
+                           # include_chunk_vars: bool = False
+                           ):
     """
 
     """
@@ -446,9 +448,9 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
     if len(out_param) == 1:
         out_param = out_param[0]
 
-    if not include_chunk_vars:
-        chunk_vars = [v for v in list(ts_xr.variables) if 'chunk' in v]
-        ts_xr = ts_xr.drop(chunk_vars)
+    # if not include_chunk_vars:
+    #     chunk_vars = [v for v in list(ts_xr.variables) if 'chunk' in v]
+    #     ts_xr = ts_xr.drop(chunk_vars)
 
     ## Return
     if squeeze_dims:
