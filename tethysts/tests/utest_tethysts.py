@@ -116,8 +116,8 @@ station_id = '937f2bb85e82347746fe1be9'
 dataset_id = '4f5945540c2391967b550cc6'
 station_id = '4db28a9db0cb036507490887'
 
-dataset_id = '0b2bd62cc42f3096136f11e9'
-station_id = '71cd89d47beb79712903eb10'
+dataset_id = '52e2196ce75eba1b79e61680'
+station_id = '7ddd130ed4b89381d879e0d5'
 #
 #
 self = Tethys([remote])
@@ -231,12 +231,9 @@ stns1 = self.get_stations(dataset_id)
 
 station_ids = [s['station_id'] for s in stns1[:10]]
 
-results1 = self.get_results(dataset_id, station_ids, heights=None, include_chunk_vars=True)
+results1 = self.get_results(dataset_id, station_ids, heights=None)
 
-results1 = self.get_results(dataset_id, station_ids, heights=[10], include_chunk_vars=True)
-
-
-
+results1 = self.get_results(dataset_id, station_ids, heights=[10])
 
 
 

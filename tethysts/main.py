@@ -15,7 +15,7 @@ import copy
 # from multiprocessing.pool import ThreadPool
 import concurrent.futures
 import multiprocessing as mp
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters, download_results
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters, download_results, v2_v3_results_chunks
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
 from typing import Optional, List, Any, Union
 from enum import Enum
@@ -176,10 +176,7 @@ class Tethys(object):
         try:
             get_dict = copy.deepcopy(remote)
 
-            if 'version' in get_dict:
-                version = get_dict.pop('version')
-            else:
-                version = 2
+            version = get_dict.pop('version')
 
             get_dict['obj_key'] = self._key_patterns[version]['datasets']
             ds_obj = get_object_s3(**get_dict)
@@ -240,18 +237,12 @@ class Tethys(object):
                 remote['obj_key'] = site_key
                 stn_obj = get_object_s3(**remote)
                 stn_list = read_json_zstd(stn_obj)
+                if version in [2, 3]:
+                    _ = [stn.pop('results_object_key') for stn in stn_list]
                 stn_dict = {s['station_id']: s for s in stn_list if isinstance(s, dict)}
             except:
                 print('No stations.json.zst file in S3 bucket')
                 return None
-
-            ## Results obj keys if old version
-            ## TODO: Do this for the old versions
-            # if not 'version' in self._datasets[dataset_id]:
-
-            #     res_obj_keys = {si: s['results_object_key'] for si, s in stn_dict.items()}
-            #     self._results_obj_keys.update({dataset_id: copy.deepcopy(res_obj_keys)})
-            #     [s.update({'results_object_key': s['results_object_key'][-1]}) for i, s in stn_dict.items()]
 
             self._stations.update({dataset_id: stn_dict})
 
@@ -294,12 +285,21 @@ class Tethys(object):
                 else:
                     results_chunks[stn_id] = [s]
 
-            self._versions[dataset_id] = results_versions
-            self._results_chunks[dataset_id] = results_chunks
         else:
-            raise NotImplementedError('I need to update this for the previous versions.')
-            # _ = self.get_stations(dataset_id)
-            # obj_keys = self._results_obj_keys[dataset_id]
+            ## Backwards compatibility
+            remote = copy.deepcopy(self._remotes[dataset_id])
+            version = remote.pop('version')
+
+            rok_key = self._key_patterns[version]['results_object_keys'].format(dataset_id=dataset_id)
+            remote['obj_key'] = rok_key
+
+            rok_obj = get_object_s3(**remote)
+            rok_list = read_json_zstd(rok_obj)
+
+            results_versions, results_chunks = v2_v3_results_chunks(rok_list)
+
+        self._versions[dataset_id] = results_versions
+        self._results_chunks[dataset_id] = results_chunks
 
         return results_versions, results_chunks
 
@@ -388,6 +388,7 @@ class Tethys(object):
                     geometry: dict = None,
                     lat: float = None,
                     lon: float = None,
+                    distance: float = None,
                     from_date: Union[str, pd.Timestamp, datetime] = None,
                     to_date: Union[str, pd.Timestamp, datetime] = None,
                     from_mod_date: Union[str, pd.Timestamp, datetime] = None,
@@ -415,6 +416,8 @@ class Tethys(object):
             Instead of using the geometry parameter, optionally use lat and lon for the spatial queries. Both lat and lon must be passed for the spatial queries and will override the geometry parameter. If only lat and lon are passed, then the method performs a nearest neighbor query.
         lon : float or None
             See lat description.
+        distance : float or None
+            See lat description. This should be in decimal degrees not meters.
         from_date : str, Timestamp, datetime, or None
             The start date of the selection.
         to_date : str, Timestamp, datetime, or None
@@ -448,7 +451,11 @@ class Tethys(object):
         parameter = dataset['parameter']
         remote = copy.deepcopy(self._remotes[dataset_id])
         version = remote.pop('version')
-        time_interval = int(dataset['chunk_parameters']['time_interval'])
+
+        if 'chunk_parameters' in dataset:
+            time_interval = int(dataset['chunk_parameters']['time_interval'])
+        else:
+            time_interval = 0
 
         if isinstance(geometry, dict):
             geom_type = geometry['type']
@@ -467,7 +474,7 @@ class Tethys(object):
             stn_dict = self._stations[dataset_id]
 
             # Run the spatial query
-            stn_ids = spatial_query(stn_dict, geometry, lat, lon)
+            stn_ids = spatial_query(stn_dict, geometry, lat, lon, distance)
         else:
             raise ValueError('A station_id, geometry or a combination of lat and lon must be passed.')
 
@@ -614,13 +621,13 @@ class Tethys(object):
                 xr3[v] = xr3[v].astype(dtype)
 
         ## Convert to new version
-        # attrs = xr3.attrs.copy()
-        # if ('version' not in attrs):
-        #     xr3 = convert_results_v2_to_v3(xr3)
-        #     attrs['version'] = 3
+        attrs = xr3.attrs.copy()
+        if ('version' not in attrs):
+            xr3 = convert_results_v2_to_v3(xr3)
+            attrs['version'] = 3
 
-        # if attrs['version'] == 3:
-        #     xr3 = convert_results_v3_to_v4(xr3)
+        if attrs['version'] == 3:
+            xr3 = convert_results_v3_to_v4(xr3)
 
         ## Extra spatial query if data are stored in blocks
         if ('station_geometry' in xr3) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):

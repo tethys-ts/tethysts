@@ -365,16 +365,16 @@ def chunk_filters(results_chunks, time_interval=None, version_date=None, from_da
     rc2 = list(rc1.values())
 
     ## Temporal filter
-    if isinstance(from_date, (str, pd.Timestamp, datetime)):
+    if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc):
         from_date1 = int(pd.Timestamp(from_date).timestamp()/60/60/24)
         rc2 = [rc for rc in rc2 if (rc['chunk_day'] + time_interval) >= from_date1]
 
-    if isinstance(to_date, (str, pd.Timestamp, datetime)):
+    if isinstance(to_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc):
         to_date1 = int(pd.Timestamp(to_date).timestamp()/60/60/24)
         rc2 = [rc for rc in rc2 if rc['chunk_day'] <= to_date1]
 
     ## Heights and bands filter
-    if heights is not None:
+    if (heights is not None) and ('height' in rc):
         if isinstance(heights, (int, float)):
             h1 = [int(heights*1000)]
         elif isinstance(heights, list):
@@ -383,7 +383,7 @@ def chunk_filters(results_chunks, time_interval=None, version_date=None, from_da
             raise TypeError('heights must be an int, float, or list of int/float.')
         rc2 = [rc for rc in rc2 if rc['height'] in h1]
 
-    if bands is not None:
+    if (bands is not None) and ('band' in rc):
         if isinstance(bands, int):
             b1 = [heights]
         elif isinstance(bands, list):
@@ -429,7 +429,7 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
     return ts_xr1
 
 
-def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False, 
+def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False,
                            # include_chunk_vars: bool = False
                            ):
     """
@@ -657,6 +657,32 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
         return {'station_id': chunk['station_id'], 'chunk': obj2}
 
 
+def v2_v3_results_chunks(results_obj):
+    """
+    Function to convert version 2 and 3 data into result chunks and result versions. This conversion only keeps the last version of the results.
+    """
+    last_version = max([obj['results_object_key'][-1]['run_date'] for obj in results_obj])
+
+    results_chunks = {}
+
+    for obj in results_obj:
+        last_obj = obj['results_object_key'][-1]
+        rc1 = {'chunk_id': '',
+               'chunk_hash': '',
+               'dataset_id': obj['dataset_id'],
+               'station_id': obj['station_id'],
+               'content_length': last_obj['content_length'],
+               'key': last_obj['key'],
+               'version_date': pd.Timestamp(last_version)
+               }
+
+        results_chunks[obj['station_id']] = [rc1]
+
+    results_version = [{'dataset_id': obj['dataset_id'],
+               'version_date': last_version,
+               'modified_date': last_version}]
+
+    return results_version, results_chunks
 
 
 
