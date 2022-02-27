@@ -13,11 +13,50 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 2}
+remote1 = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 2}
 
-dataset_id = 'b5d84aa773de2a747079c127'
-station_id = '4db28a9db0cb036507490887'
-station_ids = [station_id, '474f75b4de127caca088620a']
+remote2 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz', 'version': 3}
+
+remote3 = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 4}
+
+dataset_id = '752ee66d969cc09a16efebc7'
+station_ids = '9b46e9569369e969f6946ba3'
+
+# dataset_id = 'c3a09c8a5da175897916e8e8'
+# station_ids = '4db28a9db0cb036507490887'
+
+remotes = [
+    {'remote': remote1,
+    'dataset_id': 'c3a09c8a5da175897916e8e8',
+    'station_ids': '4db28a9db0cb036507490887',
+    'assert':
+        {'datasets': 1,
+          'stations': 1,
+          'versions': 0,
+          'results': 1,
+          }
+    },
+    {'remote': remote2,
+      'dataset_id': 'f27574a7b38eab5b0bc2b3d7',
+      'station_ids': '9c90243e84b8c5b17f0726c4',
+      'assert':
+          {'datasets': 1,
+          'stations': 1,
+          'versions': 0,
+          'results': 1,
+          }
+      },
+    {'remote': remote3,
+     'dataset_id': dataset_id,
+     'station_ids': station_ids,
+     'assert':
+         {'datasets': 1,
+          'stations': 1,
+          'versions': 0,
+          'results': 1,
+          }
+     },
+     ]
 
 outputs = ['Dataset', 'DataArray', 'Dict']
 
@@ -31,35 +70,37 @@ distance = 0.2
 ### Testing
 
 
-def test_get_datasets():
-    t1 = Tethys([remote])
+@pytest.mark.parametrize('remote', remotes)
+def test_tethys(remote):
+    """
+
+    """
+    t1 = Tethys([remote['remote']])
+
+    ## Datasets
     datasets = t1.datasets
-    assert len(datasets) > 5
+    assert len(datasets) > remote['assert']['datasets']
+
+    ## Stations
+    stn_list1 = t1.get_stations(remote['dataset_id'])
+    assert len(stn_list1) > remote['assert']['stations']
+
+    ## Versions
+    rv1 = t1.get_versions(remote['dataset_id'])
+    assert len(rv1) > remote['assert']['versions']
+
+    ## Results
+    data1 = t1.get_results(remote['dataset_id'], remote['station_ids'], output='Dataset')
+    assert len(data1) > remote['assert']['results']
 
 
 ## initialise for the rest of the tests
-t1 = Tethys([remote])
-
-
-def test_get_stations():
-    stn_list1 = t1.get_stations(dataset_id)
-
-    assert len(stn_list1) > 2
-
-
-## Get the stations loaded in the object
-stn_list1 = t1.get_stations(dataset_id)
-
-
-def test_get_run_dates():
-    run_dates = t1.get_run_dates(dataset_id, station_id)
-
-    assert len(run_dates) > 1
+t1 = Tethys([remote3])
 
 
 @pytest.mark.parametrize('output', outputs)
 def test_get_results(output):
-    data1 = t1.get_results(dataset_id, station_id, squeeze_dims=True, output=output)
+    data1 = t1.get_results(dataset_id, station_ids, squeeze_dims=True, output=output)
 
     if output == 'Dataset':
         assert len(data1.time) > 90
@@ -69,12 +110,6 @@ def test_get_results(output):
         assert len(data1['coords']['time']['data']) > 90
     else:
         raise ValueError('Forgot to put in new assertion')
-
-
-def test_get_bulk_results():
-    data2 = t1.get_bulk_results(dataset_id, station_ids, squeeze_dims=True, output='Dataset')
-
-    assert len(data2) > 6
 
 
 def test_get_nearest_station1():
@@ -98,16 +133,16 @@ def test_get_intersection_stations1():
 def test_get_nearest_results1():
     s1 = t1.get_results(dataset_id, geometry=geometry1)
 
-    assert len(s1) == 7
+    assert len(s1) > 1
 
 
 def test_get_nearest_results2():
     s2 = t1.get_results(dataset_id, lat=lat, lon=lon)
 
-    assert len(s2) == 7
+    assert len(s2) > 1
 
 
-# def test_get_intersection_stations1():
-#     s3 = t1.get_results(dataset_id, lat=lat, lon=lon, distance=distance)
+def test_get_intersection_results1():
+    s3 = t1.get_results(dataset_id, lat=lat, lon=lon, distance=distance)
 
-#     assert len(s3) >= 3
+    assert len(s3) > 1

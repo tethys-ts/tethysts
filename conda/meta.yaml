@@ -1,6 +1,6 @@
 {% set name = "tethysts" %}
-{% set version = "0.2.19" %}
-{% set sha256 = "ae2cc83fb5a75e8dc3e1b2c2137deea412c8a4c7c9acca52bf4ec59de52a80c9" %}
+{% set version = "0.4.0" %}
+# {% set sha256 = "ae2cc83fb5a75e8dc3e1b2c2137deea412c8a4c7c9acca52bf4ec59de52a80c9" %}
 
 # sha256 is the prefered checksum -- you can get it for a file with:
 #  `openssl sha256 <file name>`.
@@ -17,7 +17,7 @@ source:
   # If getting the source from GitHub remove the line above
   # uncomment the line below and modify as needed
   # url: https://github.com/simplejson/{{ name }}/archive/{{ version }}.tar.gz
-  sha256: {{ sha256 }}
+  # sha256: {{ sha256 }}
 
 build:
   # Uncomment the following line if the package is pure python and the recipe is exactly the same for all platforms.
@@ -44,7 +44,7 @@ requirements:
     - orjson
     - requests
     - shapely
-    - tethys-data-models
+    - tethys-data-models>=0.4.0
 
 test:
   imports:

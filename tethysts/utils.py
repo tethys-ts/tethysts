@@ -2,6 +2,8 @@
 
 
 """
+from io import BytesIO, SEEK_SET, SEEK_END, DEFAULT_BUFFER_SIZE
+import os
 import numpy as np
 import requests
 import xarray as xr
@@ -20,6 +22,11 @@ from typing import Optional, List, Any, Union
 from scipy import spatial
 import traceback
 import tethys_data_models as tdm
+import pathlib
+from functools import partial
+from pydantic import HttpUrl
+import shutil
+import gzip
 
 pd.options.display.max_columns = 10
 
@@ -27,31 +34,59 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Reference objects
 
-key_patterns = {2: {
-                    'results': 'tethys/v2/{dataset_id}/{station_id}/{run_date}/results.nc.zst',
-                    'datasets': 'tethys/v2/datasets.json.zst',
-                    'stations': 'tethys/v2/{dataset_id}/stations.json.zst',
-                    'station': 'tethys/v2/{dataset_id}/{station_id}/station.json.zst',
-                    'dataset': 'tethys/v2/{dataset_id}/dataset.json.zst',
-                    'results_object_keys': 'tethys/v2/{dataset_id}/results_object_keys.json.zst'
-                    },
-                3: {
-                    'results': 'tethys/v3/{dataset_id}/{station_id}/{run_date}.results.nc.zst',
-                    'datasets': 'tethys/v3.datasets.json.zst',
-                    'stations': 'tethys/v3/{dataset_id}.stations.json.zst',
-                    'station': 'tethys/v3/{dataset_id}/{station_id}.station.json.zst',
-                    'dataset': 'tethys/v3/{dataset_id}.dataset.json.zst',
-                    'results_object_keys': 'tethys/v3/{dataset_id}.results_object_keys.json.zst'
-                    }
-                }
-
-
 b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'
-# public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/v2/public_remotes.json.zst'
 public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/public_remotes.json.zst'
+
+local_results_name = '{ds_id}/{stn_id}/{chunk_id}.{version_date}.{chunk_hash}.nc'
 
 ##############################################
 ### Helper functions
+
+
+class ResponseStream(object):
+    """
+    In many applications, you'd like to access a requests response as a file-like object, simply having .read(), .seek(), and .tell() as normal. Especially when you only want to partially download a file, it'd be extra convenient if you could use a normal file interface for it, loading as needed.
+
+This is a wrapper class for doing that. Only bytes you request will be loaded - see the example in the gist itself.
+
+https://gist.github.com/obskyr/b9d4b4223e7eaf4eedcd9defabb34f13
+    """
+    def __init__(self, request_iterator):
+        self._bytes = BytesIO()
+        self._iterator = request_iterator
+
+    def _load_all(self):
+        self._bytes.seek(0, SEEK_END)
+        for chunk in self._iterator:
+            self._bytes.write(chunk)
+
+    def _load_until(self, goal_position):
+        current_position = self._bytes.seek(0, SEEK_END)
+        while current_position < goal_position:
+            try:
+                current_position += self._bytes.write(next(self._iterator))
+            except StopIteration:
+                break
+
+    def tell(self):
+        return self._bytes.tell()
+
+    def read(self, size=None):
+        left_off_at = self._bytes.tell()
+        if size is None:
+            self._load_all()
+        else:
+            goal_position = left_off_at + size
+            self._load_until(goal_position)
+
+        self._bytes.seek(left_off_at)
+        return self._bytes.read(size)
+
+    def seek(self, position, whence=SEEK_SET):
+        if whence == SEEK_END:
+            self._load_all()
+        else:
+            self._bytes.seek(position, whence)
 
 
 def cartesian_product(*arrays):
@@ -213,9 +248,9 @@ def read_json_zstd(obj):
     return dict1
 
 
-def s3_connection(connection_config, max_pool_connections=30):
+def s3_client(connection_config: dict, max_pool_connections: int = 30):
     """
-    Function to establish a connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
+    Function to establish a client connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
 
     Parameters
     ----------
@@ -249,26 +284,24 @@ def s3_connection(connection_config, max_pool_connections=30):
     return s3
 
 
-def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=5, file_path=None, chunk_size=8192*5):
+def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl=None, counter=5):
     """
-    General function to get an object from an S3 bucket.
+    General function to get an object from an S3 bucket. One of s3, connection_config, or public_url must be used.
 
     Parameters
     ----------
     obj_key : str
         The object key in the S3 bucket.
+    s3 : botocore.client.BaseClient
+        An S3 object created via the s3_client function.
     connection_config : dict
-        A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
+        A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+    public_url : str
+        A URL to a public S3 bucket. This is generally only used for Backblaze object storage.
     bucket : str
         The bucket name.
-    compression : None or str
-        The compression of the object that should be decompressed. Options include zstd.
     counter : int
         Number of times to retry to get the object.
-    file_path : str or None
-        If file_path is a str path, then the object will be saved to disk instead of held in memory. The default of None will not save it to disk.
-    chunk_size : int
-        The chunk size in bytes to iteratively save to disk. Only relevant if file_path is a str path.
 
     Returns
     -------
@@ -278,51 +311,88 @@ def get_object_s3(obj_key, connection_config, bucket, compression=None, counter=
     counter1 = counter
     while True:
         try:
-            if isinstance(connection_config, dict):
-                ## Validate config
-                _ = tdm.base.ConnectionConfig(**connection_config)
+            if isinstance(public_url, str):
+                url = b2_public_key_pattern.format(base_url=public_url, bucket=bucket, obj_key=obj_key)
+                resp = requests.get(url)
+                resp.raise_for_status()
 
-                s3 = s3_connection(connection_config)
+                ts_obj = resp.content
 
+            elif isinstance(s3, botocore.client.BaseClient):
                 ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
                 ts_obj = ts_resp.pop('Body').read()
 
-            elif isinstance(connection_config, str):
-                url = b2_public_key_pattern.format(base_url=connection_config, bucket=bucket, obj_key=obj_key)
-                if isinstance(file_path, str):
-                    # local_filename = url.split('/')[-1]
-                    # NOTE the stream=True parameter below
-                    with requests.get(url, stream=True) as r:
-                        r.raise_for_status()
-                        with open(file_path, 'wb') as f:
-                            for chunk in r.iter_content(chunk_size=chunk_size):
-                                # If you have chunk encoded response uncomment if
-                                # and set chunk_size parameter to None.
-                                #if chunk:
-                                f.write(chunk)
-                    ts_obj = None
-                else:
-                    resp = requests.get(url)
-                    resp.raise_for_status()
+            elif isinstance(connection_config, dict):
+                ## Validate config
+                _ = tdm.base.ConnectionConfig(**connection_config)
 
-                    ts_obj = resp.content
+                s3 = s3_client(connection_config)
 
-            if isinstance(compression, str):
-                if compression == 'zstd':
-                    ts_obj = read_pkl_zstd(ts_obj, False)
-                else:
-                    raise ValueError('compression option can only be zstd or None')
+                ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
+                ts_obj = ts_resp.pop('Body').read()
+            else:
+                raise TypeError('One of s3, connection_config, or public_url needs to be correctly defined.')
             break
         except:
-            print(traceback.format_exc())
+            # print(traceback.format_exc())
             if counter1 == 0:
-                raise ValueError('Could not properly extract the object after several tries')
+                # raise ValueError('Could not properly download the object after several tries')
+                print('Object could not be downloaded.')
+                return None
             else:
-                print('Could not properly extract the object; trying again in 5 seconds')
+                # print('Could not properly extract the object; trying again in 5 seconds')
                 counter1 = counter1 - 1
                 sleep(5)
 
     return ts_obj
+
+
+def chunk_filters(results_chunks, time_interval=None, version_date=None, from_date=None, to_date=None, heights=None, bands=None):
+    """
+
+    """
+    ## Get the chunks associated with a specific version
+    if isinstance(version_date, (str, pd.Timestamp, datetime)):
+        vd1 = pd.Timestamp(version_date)
+    else:
+        vd1 = pd.Timestamp.now(tz='UTC').round('s').tz_localize(None)
+
+    rc1 = {}
+    for rc in results_chunks:
+        if rc['version_date'] <= vd1:
+            rc1[rc['chunk_id']] = rc
+
+    rc2 = list(rc1.values())
+
+    ## Temporal filter
+    if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc):
+        from_date1 = int(pd.Timestamp(from_date).timestamp()/60/60/24)
+        rc2 = [rc for rc in rc2 if (rc['chunk_day'] + time_interval) >= from_date1]
+
+    if isinstance(to_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc):
+        to_date1 = int(pd.Timestamp(to_date).timestamp()/60/60/24)
+        rc2 = [rc for rc in rc2 if rc['chunk_day'] <= to_date1]
+
+    ## Heights and bands filter
+    if (heights is not None) and ('height' in rc):
+        if isinstance(heights, (int, float)):
+            h1 = [int(heights*1000)]
+        elif isinstance(heights, list):
+            h1 = [int(h*1000) for h in heights]
+        else:
+            raise TypeError('heights must be an int, float, or list of int/float.')
+        rc2 = [rc for rc in rc2 if rc['height'] in h1]
+
+    if (bands is not None) and ('band' in rc):
+        if isinstance(bands, int):
+            b1 = [heights]
+        elif isinstance(bands, list):
+            b1 = [int(b) for b in bands]
+        else:
+            raise TypeError('bands must be an int or list of int.')
+        rc2 = [rc for rc in rc2 if rc['band'] in b1]
+
+    return rc2
 
 
 def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None):
@@ -359,7 +429,9 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
     return ts_xr1
 
 
-def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False):
+def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False,
+                           # include_chunk_vars: bool = False
+                           ):
     """
 
     """
@@ -375,6 +447,10 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
 
     if len(out_param) == 1:
         out_param = out_param[0]
+
+    # if not include_chunk_vars:
+    #     chunk_vars = [v for v in list(ts_xr.variables) if 'chunk' in v]
+    #     ts_xr = ts_xr.drop(chunk_vars)
 
     ## Return
     if squeeze_dims:
@@ -419,17 +495,256 @@ def convert_results_v2_to_v3(data):
 
     # data2['station_id'].attrs = data['station_id'].attrs
     data2['geometry'].attrs = {'long_name': 'The hexadecimal encoding of the Well-Known Binary (WKB) geometry', 'crs_EPSG': 4326}
-    data2.attrs.update({'version': 3})
 
     data2 = data2.expand_dims('geometry')
+    # data2 = data2.expand_dims('height')
 
-    # vars2 = list(data2.variables)
+    # vars1 = list(data2.variables)
+    # param = [p for p in vars1 if 'dataset_id' in data2[p].attrs][0]
+    # param_attrs = data2[param].attrs
 
-    # if 'name' in vars2:
-    #     data2 = data2.assign({'name': (('station_id'), data2['name'])})
-    #     data2['name'].attrs = data['name'].attrs
-    # if 'ref' in vars2:
-    #     data2 = data2.assign({'ref': (('station_id'), data2['ref'])})
-    #     data2['ref'].attrs = data['ref'].attrs
+    # if 'result_type' in data2[param].attrs:
+    #     _ = data2[param].attrs.pop('result_type')
+    # data2[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
+
+    # params = [param]
+    # if 'ancillary_variables' in param_attrs:
+    #     params.extend(param_attrs['ancillary_variables'].split(' '))
+
+    # for p in params:
+    #     data2[p] = data2[p].expand_dims('height')
+
+    data2.attrs.update({'version': 3})
 
     return data2
+
+
+def convert_results_v3_to_v4(data):
+    """
+    Function to convert xarray Dataset results in verion 3 structure to version 4 structure.
+    """
+    ## Change the extent to station_geometry
+    if 'extent' in list(data.coords):
+        data = data.rename({'extent': 'station_geometry'})
+
+    ## Change spatial_distribution to result_type
+    vars1 = list(data.variables)
+    param = [p for p in vars1 if 'dataset_id' in data[p].attrs][0]
+    param_attrs = data[param].attrs
+
+    if 'result_type' in param_attrs:
+        _ = data[param].attrs.pop('result_type')
+        data[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
+
+    sd_attr = param_attrs.pop('spatial_distribution')
+
+    if sd_attr == 'sparse':
+        result_type = 'time_series'
+    else:
+        result_type = 'grid'
+
+    data[param].attrs.update({'result_type': result_type})
+
+    ## change base attrs
+    _ = data.attrs.pop('featureType')
+    data.attrs.update({'result_type': result_type, 'version': 4})
+
+    return data
+
+
+# def read_in_chunks(file_object, chunk_size=524288):
+#     while True:
+#         data = file_object.read(chunk_size)
+#         if not data:
+#             break
+#         yield data
+
+
+def local_file_byte_iterator(path, chunk_size=DEFAULT_BUFFER_SIZE):
+    """given a path, return an iterator over the file
+    that lazily loads the file.
+    https://stackoverflow.com/a/37222446/6952674
+    """
+    path = pathlib.Path(path)
+    with path.open('rb') as file:
+        reader = partial(file.read1, DEFAULT_BUFFER_SIZE)
+        file_iterator = iter(reader, bytes())
+        for chunk in file_iterator:
+            yield from chunk
+
+
+# def file_byte_iterator(file, chunk_size=DEFAULT_BUFFER_SIZE):
+#     """given a path, return an iterator over the file
+#     that lazily loads the file.
+#     https://stackoverflow.com/a/37222446/6952674
+#     """
+#     reader = partial(file.read, chunk_size)
+#     file_iterator = iter(reader, bytes())
+#     for chunk in file_iterator:
+#         yield from chunk
+
+
+def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
+    """
+
+    """
+    file_path1 = pathlib.Path(file_path)
+    if file_path1.is_dir():
+        file_name = url.split('/')[-1]
+        file_path2 = str(file_path1.joinpath(file_name))
+    else:
+        file_path2 = file_path
+
+    base_path = os.path.split(file_path2)[0]
+    os.makedirs(base_path, exist_ok=True)
+
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        stream = ResponseStream(r.iter_content(chunk_size))
+
+        if compression == 'zstd':
+            if str(file_path2).endswith('.zst'):
+                file_path2 = os.path.splitext(file_path2)[0]
+            dctx = zstd.ZstdDecompressor()
+
+            with open(file_path2, 'wb') as f:
+                dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
+
+        elif compression == 'gzip':
+            if str(file_path2).endswith('.gz'):
+                file_path2 = os.path.splitext(file_path2)[0]
+
+            with gzip.open(stream, 'rb') as s_file, open(file_path2, 'wb') as d_file:
+                shutil.copyfileobj(s_file, d_file, chunk_size)
+        else:
+            with open(file_path2, 'wb') as f:
+                chunk = stream.read(chunk_size)
+                while chunk:
+                    f.write(chunk)
+                    chunk = stream.read(chunk_size)
+
+    return file_path2
+
+
+def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None):
+    """
+
+    """
+    if isinstance(cache, pathlib.Path):
+        chunk_hash = chunk['chunk_hash']
+        version_date = chunk['version_date'].strftime('%Y%m%d%H%M%SZ')
+        results_file_name = local_results_name.format(ds_id=chunk['dataset_id'], stn_id=chunk['station_id'], chunk_id=chunk['chunk_id'], version_date=version_date, chunk_hash=chunk_hash)
+        chunk_path = cache.joinpath(results_file_name)
+        chunk_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not chunk_path.exists():
+            if public_url is not None:
+                url = b2_public_key_pattern.format(base_url=public_url, bucket=bucket, obj_key=chunk['key'])
+                _ = url_stream_to_file(url, chunk_path, compression='zstd')
+            else:
+                obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
+                with open(chunk_path, 'wb') as f:
+                    f.write(obj1)
+                del obj1
+
+        return {'station_id': chunk['station_id'], 'chunk': chunk_path}
+
+    else:
+        obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
+        obj2 = xr.load_dataset(read_pkl_zstd(obj1))
+        del obj1
+
+        return {'station_id': chunk['station_id'], 'chunk': obj2}
+
+
+def v2_v3_results_chunks(results_obj):
+    """
+    Function to convert version 2 and 3 data into result chunks and result versions. This conversion only keeps the last version of the results.
+    """
+    last_version = max([obj['results_object_key'][-1]['run_date'] for obj in results_obj])
+
+    results_chunks = {}
+
+    for obj in results_obj:
+        last_obj = obj['results_object_key'][-1]
+        rc1 = {'chunk_id': '',
+               'chunk_hash': '',
+               'dataset_id': obj['dataset_id'],
+               'station_id': obj['station_id'],
+               'content_length': last_obj['content_length'],
+               'key': last_obj['key'],
+               'version_date': pd.Timestamp(last_version)
+               }
+
+        results_chunks[obj['station_id']] = [rc1]
+
+    results_version = [{'dataset_id': obj['dataset_id'],
+               'version_date': last_version,
+               'modified_date': last_version}]
+
+    return results_version, results_chunks
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
