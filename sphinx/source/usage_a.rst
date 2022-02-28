@@ -22,7 +22,7 @@ Import the Tethys class:
    from tethysts import Tethys
    from pprint import pprint as print
 
-   remotes = [{'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}]
+   remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 2}]
    dataset_id = 'b5d84aa773de2a747079c127'
    station_id = '4db28a9db0cb036507490887'
 
@@ -49,14 +49,14 @@ Initialising the Tethys class without any parameters will pull down all public r
 
 Private datasets
 ~~~~~~~~~~~~~~~~
-Some datasets are not available through the public repository. Accessing private datasets stored in S3 buckets requires remote connection configuration data. A remote configuration requires a list of dictionaries of bucket names and connection_configs as shown in the following example:
+Some datasets are not available through the public repository. Accessing private datasets stored in S3 buckets requires remote connection configuration data. A remote configuration requires a list of dictionaries of bucket name, connection_config/public_url, and version as shown in the following example:
 
 
 .. code:: python
 
     from tethysts import Tethys
 
-    remotes = [{'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz'}]
+    remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 2}]
 
 
 Initialise the class with the remotes to get the metadata about the available datasets:
@@ -71,7 +71,7 @@ Initialise the class with the remotes to get the metadata about the available da
                                        (d['owner'] == 'Environment Canterbury')][0]
   my_dataset
 
-In this example there is one remote we want to check for datasets, but more dictionaries of connection configs and buckets can be added to the remotes list.
+In this example there is one remote we want to check for datasets, but more dictionaries can be added to the remotes list to parse more datasets.
 
 Stations
 --------
@@ -135,21 +135,21 @@ Similar to the get_stations spatial query, the get_results method has a built-in
   results = ts.get_results(dataset_id, geometry=geometry, squeeze_dims=True, output='Dataset')
   results
 
-If you want to get more than one station per dataset, then you can use the get_bulk_results. This simply runs concurrent thread requests for multiple stations' results. The output will concatenate the xarray Datasets together and return a single xarray Dataset.
+If you want to get more than one station per dataset, then you can still use the get_results. The output will concatenate the xarray Datasets together and return a single xarray Dataset.
 
 .. ipython:: python
 
   station_ids = [station_id, '474f75b4de127caca088620a']
 
-  results = ts.get_bulk_results(dataset_id, station_ids, squeeze_dims=True, output='Dataset')
+  results = ts.get_results(dataset_id, station_ids, squeeze_dims=True, output='Dataset')
   results
 
-If a run_date is not passed to the get_results method, then the latest run date will be returned. If you'd like to list all the run dates and to choose which run date you'd like to pass to the get_results or get_bulk_results methods, then you can use the get_run_dates method.
+If a version_date is not passed to the get_results method, then the latest version will be returned. If you'd like to list all the versions and to choose which version you'd like to pass to the get_results method, then you can use the get_versions method.
 
 .. ipython:: python
 
-  run_dates = ts.get_run_dates(dataset_id, station_id)
-  run_dates
+  versions = ts.get_versions(dataset_id)
+  versions
 
 
 Tethys web API
