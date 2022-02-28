@@ -143,8 +143,12 @@ class Tethys(object):
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             futures = []
             for remote in remotes:
-                _ = tdm.base.Remote(**remote)
-                f = executor.submit(self._get_remote_datasets, remote)
+                # if not 'version' in remote:
+                #     remote['version'] = 2
+                remote_m = orjson.loads(tdm.base.Remote(**remote).json(exclude_none=True))
+                if 'description' in remote_m:
+                    _ = remote_m.pop('description')
+                f = executor.submit(self._get_remote_datasets, remote_m)
                 futures.append(f)
             _ = concurrent.futures.wait(futures)
 

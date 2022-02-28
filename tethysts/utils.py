@@ -685,6 +685,10 @@ def v2_v3_results_chunks(results_obj):
     return results_version, results_chunks
 
 
+# def make_get_object_dict(remote):
+#     """
+
+#     """
 
 
 
