@@ -11,7 +11,7 @@ Get stations
 
 .. automethod:: tethysts.Tethys.get_stations
 
-Get run dates
+Get versions
 -------------
 
 .. automethod:: tethysts.Tethys.get_versions
