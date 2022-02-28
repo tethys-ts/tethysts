@@ -35,7 +35,7 @@ pd.options.display.max_columns = 10
 ### Reference objects
 
 b2_public_key_pattern = '{base_url}/file/{bucket}/{obj_key}'
-public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/public_remotes.json.zst'
+public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/public_remotes_v4.json.zst'
 
 local_results_name = '{ds_id}/{stn_id}/{chunk_id}.{version_date}.{chunk_hash}.nc'
 
