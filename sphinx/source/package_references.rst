@@ -14,17 +14,12 @@ Get stations
 Get run dates
 -------------
 
-.. automethod:: tethysts.Tethys.get_run_dates
+.. automethod:: tethysts.Tethys.get_versions
 
 Get results
 -------------
 
 .. automethod:: tethysts.Tethys.get_results
-
-Get bulk results
--------------
-
-.. automethod:: tethysts.Tethys.get_bulk_results
 
 get_run_dates
 API Pages
