@@ -14,14 +14,10 @@ from datetime import datetime
 import copy
 # from multiprocessing.pool import ThreadPool
 import concurrent.futures
-import multiprocessing as mp
 from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters, download_results, v2_v3_results_chunks
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
-from typing import Optional, List, Any, Union
-from enum import Enum
+from typing import List, Union
 import tethys_data_models as tdm
-import botocore
-from pydantic import HttpUrl
 import pathlib
 from time import time
 # import pymongo
@@ -333,11 +329,19 @@ class Tethys(object):
         """
 
         """
+        method = self._datasets[dataset_id]['method']
+        if method == 'simulation':
+            walk = False
+        else:
+            walk = True
+
         if dataset_id not in self._results_chunks:
             results_versions, results_chunks = self._get_chunks_versions(dataset_id)
-            chunks1 = chunk_filters(results_chunks[station_id], time_interval, version_date, from_date, to_date, heights, bands)
-        else:
-            chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], time_interval, version_date, from_date, to_date, heights, bands)
+
+        if version_date is None:
+            version_date = self._versions[dataset_id][-1]['version_date']
+
+        chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], version_date, time_interval, from_date, to_date, heights, bands, walk)
 
         return chunks1
 

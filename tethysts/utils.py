@@ -347,22 +347,30 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
     return ts_obj
 
 
-def chunk_filters(results_chunks, time_interval=None, version_date=None, from_date=None, to_date=None, heights=None, bands=None):
+def chunk_filters(results_chunks, version_date, time_interval=None, from_date=None, to_date=None, heights=None, bands=None, walk=False):
     """
 
     """
     ## Get the chunks associated with a specific version
-    if isinstance(version_date, (str, pd.Timestamp, datetime)):
-        vd1 = pd.Timestamp(version_date)
+    # if isinstance(version_date, (str, pd.Timestamp, datetime)):
+    #     vd1 = pd.Timestamp(version_date)
+    # else:
+    #     vd1 = pd.Timestamp.now(tz='UTC').round('s').tz_localize(None)
+
+    vd1 = pd.Timestamp(version_date)
+
+    if walk:
+        rc1 = {}
+        for rc in results_chunks:
+            if rc['version_date'] <= vd1:
+                rc1[rc['chunk_id']] = rc
+
+        rc2 = list(rc1.values())
     else:
-        vd1 = pd.Timestamp.now(tz='UTC').round('s').tz_localize(None)
+        rc2 = [rc for rc in results_chunks if rc['version_date'] == vd1]
 
-    rc1 = {}
-    for rc in results_chunks:
-        if rc['version_date'] <= vd1:
-            rc1[rc['chunk_id']] = rc
-
-    rc2 = list(rc1.values())
+        if len(rc2) == 0:
+            raise ValueError('version_date not in results chunks.')
 
     ## Temporal filter
     if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc):
