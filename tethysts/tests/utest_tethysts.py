@@ -217,6 +217,7 @@ threads: int = 20
 include_chunk_vars: bool = False
 
 remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 4}
+remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 
@@ -224,12 +225,12 @@ dataset_id = '444244a03a18cc8711e8cdc7'
 station_ids = '80ede07567c4d7cdd00b0954'
 
 self = Tethys([remote], cache=cache)
-# self = Tethys([remote])
+self = Tethys([remote])
 
 rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 
-station_ids = [s['station_id'] for s in stns1[:10]]
+station_ids = [s['station_id'] for s in stns1[:1]]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
 
