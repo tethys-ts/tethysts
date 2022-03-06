@@ -606,30 +606,42 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
     base_path = os.path.split(file_path2)[0]
     os.makedirs(base_path, exist_ok=True)
 
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        stream = ResponseStream(r.iter_content(chunk_size))
+    counter = 4
+    while True:
+        try:
+            with requests.get(url, stream=True) as r:
+                r.raise_for_status()
+                stream = ResponseStream(r.iter_content(chunk_size))
 
-        if compression == 'zstd':
-            if str(file_path2).endswith('.zst'):
-                file_path2 = os.path.splitext(file_path2)[0]
-            dctx = zstd.ZstdDecompressor()
+                if compression == 'zstd':
+                    if str(file_path2).endswith('.zst'):
+                        file_path2 = os.path.splitext(file_path2)[0]
+                    dctx = zstd.ZstdDecompressor()
 
-            with open(file_path2, 'wb') as f:
-                dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
+                    with open(file_path2, 'wb') as f:
+                        dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
 
-        elif compression == 'gzip':
-            if str(file_path2).endswith('.gz'):
-                file_path2 = os.path.splitext(file_path2)[0]
+                elif compression == 'gzip':
+                    if str(file_path2).endswith('.gz'):
+                        file_path2 = os.path.splitext(file_path2)[0]
 
-            with gzip.open(stream, 'rb') as s_file, open(file_path2, 'wb') as d_file:
-                shutil.copyfileobj(s_file, d_file, chunk_size)
-        else:
-            with open(file_path2, 'wb') as f:
-                chunk = stream.read(chunk_size)
-                while chunk:
-                    f.write(chunk)
-                    chunk = stream.read(chunk_size)
+                    with gzip.open(stream, 'rb') as s_file, open(file_path2, 'wb') as d_file:
+                        shutil.copyfileobj(s_file, d_file, chunk_size)
+                else:
+                    with open(file_path2, 'wb') as f:
+                        chunk = stream.read(chunk_size)
+                        while chunk:
+                            f.write(chunk)
+                            chunk = stream.read(chunk_size)
+
+                break
+
+        except Exception as err:
+            if counter < 1:
+                raise err
+            else:
+                counter = counter - 1
+                sleep(5)
 
     return file_path2
 
