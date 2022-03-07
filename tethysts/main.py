@@ -329,19 +329,13 @@ class Tethys(object):
         """
 
         """
-        method = self._datasets[dataset_id]['method']
-        if method == 'simulation':
-            walk = False
-        else:
-            walk = True
-
         if dataset_id not in self._results_chunks:
             results_versions, results_chunks = self._get_chunks_versions(dataset_id)
 
         if version_date is None:
             version_date = self._versions[dataset_id][-1]['version_date']
 
-        chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], version_date, time_interval, from_date, to_date, heights, bands, walk)
+        chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], version_date, time_interval, from_date, to_date, heights, bands)
 
         return chunks1
 

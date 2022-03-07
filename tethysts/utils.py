@@ -30,7 +30,6 @@ import gzip
 
 pd.options.display.max_columns = 10
 
-
 ##############################################
 ### Reference objects
 
@@ -347,42 +346,29 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
     return ts_obj
 
 
-def chunk_filters(results_chunks, version_date, time_interval=None, from_date=None, to_date=None, heights=None, bands=None, walk=False):
+def chunk_filters(results_chunks, version_date, time_interval=None, from_date=None, to_date=None, heights=None, bands=None):
     """
 
     """
     ## Get the chunks associated with a specific version
-    # if isinstance(version_date, (str, pd.Timestamp, datetime)):
-    #     vd1 = pd.Timestamp(version_date)
-    # else:
-    #     vd1 = pd.Timestamp.now(tz='UTC').round('s').tz_localize(None)
-
     vd1 = pd.Timestamp(version_date)
 
-    if walk:
-        rc1 = {}
-        for rc in results_chunks:
-            if rc['version_date'] <= vd1:
-                rc1[rc['chunk_id']] = rc
+    rc2 = [rc for rc in results_chunks if rc['version_date'] == vd1]
 
-        rc2 = list(rc1.values())
-    else:
-        rc2 = [rc for rc in results_chunks if rc['version_date'] == vd1]
-
-        if len(rc2) == 0:
-            raise ValueError('version_date not in results chunks.')
+    if len(rc2) == 0:
+        raise ValueError('version_date not in results chunks.')
 
     ## Temporal filter
-    if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc):
+    if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc2[0]):
         from_date1 = int(pd.Timestamp(from_date).timestamp()/60/60/24)
         rc2 = [rc for rc in rc2 if (rc['chunk_day'] + time_interval) >= from_date1]
 
-    if isinstance(to_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc):
+    if isinstance(to_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc2[0]):
         to_date1 = int(pd.Timestamp(to_date).timestamp()/60/60/24)
         rc2 = [rc for rc in rc2 if rc['chunk_day'] <= to_date1]
 
     ## Heights and bands filter
-    if (heights is not None) and ('height' in rc):
+    if (heights is not None) and ('height' in rc2[0]):
         if isinstance(heights, (int, float)):
             h1 = [int(heights*1000)]
         elif isinstance(heights, list):
@@ -391,7 +377,7 @@ def chunk_filters(results_chunks, version_date, time_interval=None, from_date=No
             raise TypeError('heights must be an int, float, or list of int/float.')
         rc2 = [rc for rc in rc2 if rc['height'] in h1]
 
-    if (bands is not None) and ('band' in rc):
+    if (bands is not None) and ('band' in rc2[0]):
         if isinstance(bands, int):
             b1 = [heights]
         elif isinstance(bands, list):
