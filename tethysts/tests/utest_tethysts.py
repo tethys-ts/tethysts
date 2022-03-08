@@ -230,7 +230,7 @@ self = Tethys([remote])
 rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 
-station_ids = [s['station_id'] for s in stns1[:2]]
+station_ids = [s['station_id'] for s in stns1[:1]]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
 
