@@ -17,9 +17,9 @@ remote1 = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.
 
 remote2 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz', 'version': 3}
 
-remote3 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 4}
+remote3 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz', 'version': 4}
 
-dataset_id = '752ee66d969cc09a16efebc7'
+dataset_id = 'f5b878a968d2c5bc404c07e5'
 station_ids = '9b46e9569369e969f6946ba3'
 
 # dataset_id = 'c3a09c8a5da175897916e8e8'
@@ -64,7 +64,7 @@ geometry1 = {'type': 'Point', 'coordinates': [172, -42.8]}
 # geometry2 = shape(geometry1).buffer(0.5)
 lat = -42.8
 lon = 172.0
-distance = 0.2
+distance = 0.1
 
 ######################################
 ### Testing
