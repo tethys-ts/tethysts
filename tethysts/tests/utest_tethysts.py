@@ -221,7 +221,7 @@ remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nz
 
 cache = '/media/nvme1/cache/tethys'
 
-dataset_id = '444244a03a18cc8711e8cdc7'
+dataset_id = '752ee66d969cc09a16efebc7'
 station_ids = '80ede07567c4d7cdd00b0954'
 
 self = Tethys([remote], cache=cache)
@@ -230,11 +230,11 @@ self = Tethys([remote])
 rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 
-station_ids = [s['station_id'] for s in stns1[:1]]
+station_ids = [s['station_id'] for s in stns1[:2]]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
 
-results1 = self.get_results(dataset_id, station_ids, heights=[10])
+results1 = self.get_results(dataset_id, station_ids, heights=[2])
 
 
 

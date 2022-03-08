@@ -691,10 +691,27 @@ def v2_v3_results_chunks(results_obj):
     return results_version, results_chunks
 
 
-# def make_get_object_dict(remote):
-#     """
+def get_results_chunk(dataset_id, station_id, remote, version):
+    """
 
-#     """
+    """
+    stn_key = tdm.key_patterns[version]['station'].format(dataset_id=dataset_id, station_id=station_id)
+
+    remote1 = copy.deepcopy(remote)
+
+    remote1['obj_key'] = stn_key
+    stn_obj = get_object_s3(**remote1)
+
+    stn_list = []
+    append = stn_list.append
+
+    for stn in read_json_zstd(stn_obj)['results_chunks']:
+        stn['version_date'] = pd.Timestamp(stn['version_date']).tz_localize(None)
+        append(stn)
+    stn_dict = {station_id: stn_list}
+
+    return stn_dict
+
 
 
 

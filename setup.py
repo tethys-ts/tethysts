@@ -19,7 +19,7 @@ descrip = 'tethys time series S3 extraction'
 if os.environ.get('READTHEDOCS', False) == 'True':
     INSTALL_REQUIRES = []
 else:
-    INSTALL_REQUIRES = ['zstandard', 'pandas', 'xarray', 'scipy', 'boto3', 'orjson', 'requests', 'shapely', 'tethys-data-models>=0.4.0']
+    INSTALL_REQUIRES = ['zstandard', 'pandas', 'xarray', 'scipy', 'boto3', 'orjson', 'requests', 'shapely', 'tethys-data-models>=0.4.1']
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
