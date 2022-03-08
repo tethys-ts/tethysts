@@ -17,7 +17,7 @@ remote1 = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.
 
 remote2 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz', 'version': 3}
 
-remote3 = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 4}
+remote3 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 4}
 
 dataset_id = '752ee66d969cc09a16efebc7'
 station_ids = '9b46e9569369e969f6946ba3'
