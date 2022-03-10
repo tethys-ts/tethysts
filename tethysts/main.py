@@ -324,16 +324,20 @@ class Tethys(object):
                     s3 = s3_client(remote['connection_config'], threads)
                     remote['s3'] = s3
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+                if len(stn_ids) == 1:
+                    chunks1 = get_results_chunk(dataset_id, stn_ids[0], remote, version)
+                else:
 
-                    futures = []
-                    for station_id in stn_ids:
-                        f = executor.submit(get_results_chunk, dataset_id, station_id, remote, version)
-                        futures.append(f)
-                    runs = concurrent.futures.wait(futures)
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
 
-                chunks1 = {}
-                _ = [chunks1.update(r.result()) for r in runs[0]]
+                        futures = []
+                        for station_id in stn_ids:
+                            f = executor.submit(get_results_chunk, dataset_id, station_id, remote, version)
+                            futures.append(f)
+                        runs = concurrent.futures.wait(futures)
+
+                    chunks1 = {}
+                    _ = [chunks1.update(r.result()) for r in runs[0]]
 
                 if dataset_id in self._results_chunks:
                     self._results_chunks[dataset_id].update(chunks1)
