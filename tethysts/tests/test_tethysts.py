@@ -13,11 +13,11 @@ pd.options.display.max_columns = 10
 ##############################################
 ### Parameters
 
-remote1 = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 2}
+remote1 = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
 
-remote2 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz', 'version': 3}
+remote2 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 3}
 
-remote3 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz', 'version': 4}
+remote3 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 
 dataset_id = 'f5b878a968d2c5bc404c07e5'
 station_ids = '9b46e9569369e969f6946ba3'
