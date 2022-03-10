@@ -311,7 +311,7 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
     while True:
         try:
             if isinstance(public_url, str):
-                url = b2_public_key_pattern.format(base_url=public_url, bucket=bucket, obj_key=obj_key)
+                url = b2_public_key_pattern.format(base_url=public_url.rstrip('/'), bucket=bucket, obj_key=obj_key)
                 resp = requests.get(url)
                 resp.raise_for_status()
 
@@ -645,7 +645,7 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
 
         if not chunk_path.exists():
             if public_url is not None:
-                url = b2_public_key_pattern.format(base_url=public_url, bucket=bucket, obj_key=chunk['key'])
+                url = b2_public_key_pattern.format(base_url=public_url.rstrip('/'), bucket=bucket, obj_key=chunk['key'])
                 _ = url_stream_to_file(url, chunk_path, compression='zstd')
             else:
                 obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
