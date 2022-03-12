@@ -312,7 +312,7 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
         try:
             if isinstance(public_url, str):
                 url = b2_public_key_pattern.format(base_url=public_url.rstrip('/'), bucket=bucket, obj_key=obj_key)
-                resp = requests.get(url)
+                resp = requests.get(url, timeout=300)
                 resp.raise_for_status()
 
                 ts_obj = resp.content
@@ -595,7 +595,7 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
     counter = 4
     while True:
         try:
-            with requests.get(url, stream=True) as r:
+            with requests.get(url, stream=True, timeout=300) as r:
                 r.raise_for_status()
                 stream = ResponseStream(r.iter_content(chunk_size))
 
