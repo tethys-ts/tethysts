@@ -713,6 +713,28 @@ def get_results_chunk(dataset_id, station_id, remote, version):
     return stn_dict
 
 
+def load_dataset(results, from_date=None, to_date=None):
+    """
+
+    """
+    if isinstance(results, (pathlib.Path, str)):
+        data = xr.load_dataset(results)
+    else:
+        data = results
+
+    if isinstance(from_date, (str, pd.Timestamp, datetime)):
+        from_date1 = pd.Timestamp(from_date)
+    else:
+        from_date1 = None
+    if isinstance(to_date, (str, pd.Timestamp, datetime)):
+        to_date1 = pd.Timestamp(to_date)
+    else:
+        to_date1 = None
+
+    if (to_date1 is not None) or (from_date1 is not None):
+        data = data.sel(time=slice(from_date1, to_date1))
+
+    return data
 
 
 
