@@ -14,7 +14,7 @@ from datetime import datetime
 import copy
 # from multiprocessing.pool import ThreadPool
 import concurrent.futures
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters, download_results, v2_v3_results_chunks, get_results_chunk
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters, download_results, v2_v3_results_chunks, get_results_chunk, load_dataset
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
 from typing import List, Union
 import tethys_data_models as tdm
@@ -604,7 +604,7 @@ class Tethys(object):
             groups1 = []
             for stn, paths in chunks2.items():
                 # xr1 = xr.combine_by_coords([xr.load_dataset(c) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override')
-                xr1 = xr.combine_by_coords([xr.load_dataset(c) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override')
+                xr1 = xr.combine_by_coords([load_dataset(c, from_date, to_date) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override')
                 groups1.append(xr1)
 
 
@@ -666,7 +666,7 @@ class Tethys(object):
 
             groups1 = []
             for stn, data in chunks2.items():
-                xr1 = xr.combine_by_coords(data, data_vars='minimal', coords='minimal', combine_attrs='override')
+                xr1 = xr.combine_by_coords([load_dataset(d, from_date, to_date) for d in data], data_vars='minimal', coords='minimal', combine_attrs='override')
                 groups1.append(xr1)
             # data_vars = set(xr3.data_vars)
 
@@ -711,7 +711,7 @@ class Tethys(object):
             xr3 = get_nearest_from_extent(xr3, geometry, lat, lon)
 
         ## Filters
-        ts_xr1 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date)
+        ts_xr1 = result_filters(xr3, from_mod_date=from_mod_date, to_mod_date=to_mod_date)
 
         ## Output
         ts_xr1 = process_results_output(ts_xr1, parameter, modified_date=False, quality_code=False, output=output, squeeze_dims=squeeze_dims)
