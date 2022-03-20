@@ -597,14 +597,14 @@ class Tethys(object):
 
             ## Get the encodings because xarray kills them later...
             temp1 = xr.open_dataset(chunks2[stn_id][0])
-            encoding = {v: temp1[v].encoding for v in list(temp1.variables)}
+            encoding = {v: temp1[v].encoding for v in list(temp1.variables) if ('chunk' not in v)}
             temp1.close()
             del temp1
 
             groups1 = []
             for stn, paths in chunks2.items():
                 # xr1 = xr.combine_by_coords([xr.load_dataset(c) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override')
-                xr1 = xr.combine_by_coords([load_dataset(c, from_date, to_date) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override')
+                xr1 = xr.combine_by_coords([load_dataset(c, from_date, to_date) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override', compat='override')
                 groups1.append(xr1)
 
 
@@ -662,11 +662,11 @@ class Tethys(object):
         else:
             ## Get the encodings because xarray kills them later...
             temp1 = chunks2[stn_id][0]
-            encoding = {v: temp1[v].encoding for v in list(temp1.variables)}
+            encoding = {v: temp1[v].encoding for v in list(temp1.variables) if ('chunk' not in v)}
 
             groups1 = []
             for stn, data in chunks2.items():
-                xr1 = xr.combine_by_coords([load_dataset(d, from_date, to_date) for d in data], data_vars='minimal', coords='minimal', combine_attrs='override')
+                xr1 = xr.combine_by_coords([load_dataset(d, from_date, to_date) for d in data], data_vars='minimal', coords='minimal', combine_attrs='override', compat='override')
                 groups1.append(xr1)
             # data_vars = set(xr3.data_vars)
 
@@ -699,11 +699,14 @@ class Tethys(object):
 
         ## Convert to new version
         attrs = xr3.attrs.copy()
-        if ('version' not in attrs):
-            xr3 = convert_results_v2_to_v3(xr3)
-            attrs['version'] = 3
+        if 'version' in attrs:
+            attrs['system_version'] = attrs.pop('version')
 
-        if attrs['version'] == 3:
+        if ('system_version' not in attrs):
+            xr3 = convert_results_v2_to_v3(xr3)
+            attrs['system_version'] = 3
+
+        if attrs['system_version'] == 3:
             xr3 = convert_results_v3_to_v4(xr3)
 
         ## Extra spatial query if data are stored in blocks

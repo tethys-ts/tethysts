@@ -34,12 +34,25 @@ pd.options.display.max_columns = 10
 ### Reference objects
 
 b2_public_key_pattern = '{base_url}/{bucket}/{obj_key}'
+contabo_public_key_pattern = '{base_url}:{bucket}/{obj_key}'
 public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/public_remotes_v4.json.zst'
 
 local_results_name = '{ds_id}/{stn_id}/{chunk_id}.{version_date}.{chunk_hash}.nc'
 
 ##############################################
 ### Helper functions
+
+
+def create_public_s3_url(base_url, bucket, obj_key):
+    """
+    This should be updated as more S3 providers are added!
+    """
+    if 'contabo' in base_url:
+        key = contabo_public_key_pattern.format(base_url=base_url.rstrip('/'), bucket=bucket, obj_key=obj_key)
+    else:
+        key = b2_public_key_pattern.format(base_url=base_url.rstrip('/'), bucket=bucket, obj_key=obj_key)
+
+    return key
 
 
 class ResponseStream(object):
@@ -241,7 +254,14 @@ def read_json_zstd(obj):
     Dict
     """
     dctx = zstd.ZstdDecompressor()
-    obj1 = dctx.decompress(obj)
+    if isinstance(obj, str):
+        with open(obj, 'rb') as p:
+            obj1 = dctx.decompress(p.read())
+    elif isinstance(obj, bytes):
+        obj1 = dctx.decompress(obj)
+    else:
+        raise TypeError('obj must either be a str path or a bytes object')
+
     dict1 = orjson.loads(obj1)
 
     return dict1
@@ -311,7 +331,7 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
     while True:
         try:
             if isinstance(public_url, str):
-                url = b2_public_key_pattern.format(base_url=public_url.rstrip('/'), bucket=bucket, obj_key=obj_key)
+                url = create_public_s3_url(public_url, bucket, obj_key)
                 resp = requests.get(url, timeout=300)
                 resp.raise_for_status()
 
@@ -645,7 +665,7 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
 
         if not chunk_path.exists():
             if public_url is not None:
-                url = b2_public_key_pattern.format(base_url=public_url.rstrip('/'), bucket=bucket, obj_key=chunk['key'])
+                url = create_public_s3_url(public_url, bucket, chunk['key'])
                 _ = url_stream_to_file(url, chunk_path, compression='zstd')
             else:
                 obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
@@ -721,6 +741,9 @@ def load_dataset(results, from_date=None, to_date=None):
         data = xr.load_dataset(results)
     else:
         data = results
+
+    chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
+    data = data.drop(chunk_vars)
 
     if isinstance(from_date, (str, pd.Timestamp, datetime)):
         from_date1 = pd.Timestamp(from_date)

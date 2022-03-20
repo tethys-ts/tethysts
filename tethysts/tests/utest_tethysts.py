@@ -218,6 +218,8 @@ include_chunk_vars: bool = False
 
 remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 4}
 remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
+remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
+remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
 
 cache = '/media/nvme1/cache/tethys'
 
@@ -226,19 +228,79 @@ station_ids = '80ede07567c4d7cdd00b0954'
 
 dataset_id = 'bb20b3ef3dd4341ee30a2bf0'
 
+dataset_id = '696c580ebf3d80d9bc4d7bc1'
+
+dataset_id = 'dddb02cd5cb7ae191311ab19'
+station_ids = '71369f685f7a5841a060a171'
+
+dataset_id = '0b2bd62cc42f3096136f11e9'
+station_ids = 'c8db6013a9eb76705b5c80f2'
+ref = 'ashley'
+
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
 
 rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 
-station_ids = [s['station_id'] for s in stns1[:10]]
+station_ids = [s['station_id'] for s in stns1[:3]]
+station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
 
 results1 = self.get_results(dataset_id, station_ids, heights=[10])
 
-results1 = self.get_results(dataset_id, station_ids, heights=[10], from_date='2021-05-01')
+results1 = self.get_results(dataset_id, station_ids, heights=[10], from_date='2021-04-01')
+
+results1 = self.get_results(dataset_id, station_ids, heights=None, from_date='2021-04-01')
+
+
+for d in self.datasets:
+    rv1 = self.get_versions(d['dataset_id'])
+    print(rv1)
+
+
+results1 = self.get_results(dataset_id, 'fac7e3f6ee48113ccb30e446', heights=None)
+
+results1 = self.get_results(dataset_id, station_ids, heights=None, version_date='2022-03-16T00:00:00')
+
+
+station_ids = [s['station_id'] for s in stns1[:3]]
+
+for s in stns1:
+    print(s['station_id'])
+    out1 = self.get_results(dataset_id, s['station_id'])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

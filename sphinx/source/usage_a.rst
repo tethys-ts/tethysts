@@ -73,6 +73,19 @@ Initialise the class with the remotes to get the metadata about the available da
 
 In this example there is one remote we want to check for datasets, but more dictionaries can be added to the remotes list to parse more datasets.
 
+Caching
+~~~~~~~~~~~~~~~~
+New version 4, the Tethys class can now be initialized with a local cache path. Tethys can now download the results chunks locally to be used again in future get_results calls.
+
+Just pass a cache path when Tethys is initialized:
+
+.. code:: python
+
+    from tethysts import Tethys
+
+    ts = Tethys(remotes, cache='/my/local/cache/path')
+
+
 Stations
 --------
 Once you've decided which dataset you want (i.e. cumulative 24 hour precipitation), write down the dataset_id contained within the associated dictionary and pass it to the next method: get_stations.
@@ -144,7 +157,15 @@ If you want to get more than one station per dataset, then you can still use the
   results = ts.get_results(dataset_id, station_ids, squeeze_dims=True, output='Dataset')
   results
 
-If a version_date is not passed to the get_results method, then the latest version will be returned. If you'd like to list all the versions and to choose which version you'd like to pass to the get_results method, then you can use the get_versions method.
+
+Selective filters
+~~~~~~~~~~~~~~~~~
+In Tethys version 4, the results have been saved into multiple chunks. These chunks contain specific time periods, heights, and stations. It is best to provide from_date, to_date, and heights filters to the get_results method so that less data needs to be downloaded and concatenated.
+
+
+Dataset versions
+----------------
+If a version_date is not passed to the get_results method, then the latest dataset version will be returned. If you'd like to list all the dataset versions and to choose which version you'd like to pass to the get_results method, then you can use the get_versions method.
 
 .. ipython:: python
 
