@@ -241,7 +241,14 @@ def read_json_zstd(obj):
     Dict
     """
     dctx = zstd.ZstdDecompressor()
-    obj1 = dctx.decompress(obj)
+    if isinstance(obj, str):
+        with open(obj, 'rb') as p:
+            obj1 = dctx.decompress(p.read())
+    elif isinstance(obj, bytes):
+        obj1 = dctx.decompress(obj)
+    else:
+        raise TypeError('obj must either be a str path or a bytes object')
+
     dict1 = orjson.loads(obj1)
 
     return dict1
@@ -721,6 +728,9 @@ def load_dataset(results, from_date=None, to_date=None):
         data = xr.load_dataset(results)
     else:
         data = results
+
+    chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
+    data = data.drop(chunk_vars)
 
     if isinstance(from_date, (str, pd.Timestamp, datetime)):
         from_date1 = pd.Timestamp(from_date)
