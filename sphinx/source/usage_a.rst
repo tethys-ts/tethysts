@@ -22,7 +22,7 @@ Import the Tethys class:
    from tethysts import Tethys
    from pprint import pprint as print
 
-   remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 2}]
+   remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}]
    dataset_id = 'b5d84aa773de2a747079c127'
    station_id = '4db28a9db0cb036507490887'
 
@@ -56,7 +56,7 @@ Some datasets are not available through the public repository. Accessing private
 
     from tethysts import Tethys
 
-    remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 2}]
+    remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}]
 
 
 Initialise the class with the remotes to get the metadata about the available datasets:
