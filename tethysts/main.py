@@ -394,7 +394,7 @@ class Tethys(object):
         return versions
 
 
-    def _get_results_chunks_filter(self, dataset_id: str, station_id: str, time_interval: int, version_date: Union[str, pd.Timestamp] = None, from_date=None, to_date=None, heights=None, bands=None):
+    def _get_version_date(self, dataset_id: str, version_date: Union[str, pd.Timestamp] = None):
         """
 
         """
@@ -405,9 +405,19 @@ class Tethys(object):
 
         if version_date is None:
             version_date = versions[-1]['version_date']
+        else:
+            vd = pd.Timestamp(version_date)
+            vd_list = [v for v in versions if pd.Timestamp(v['version_date']) == vd]
+            if len(vd_list) == 0:
+                raise ValueError('version_date is not available.')
 
-        # TODO: maybe do a test to make sure that the passed version date exists?
+        return version_date
 
+
+    def _get_results_chunks_filter(self, dataset_id: str, station_id: str, time_interval: int, version_date: Union[str, pd.Timestamp], from_date=None, to_date=None, heights=None, bands=None):
+        """
+
+        """
         chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], version_date, time_interval, from_date, to_date, heights, bands)
 
         return chunks1
@@ -556,10 +566,12 @@ class Tethys(object):
         ## Get results chunks
         self._load_results_chunks(dataset_id, stn_ids)
 
+        vd = self._get_version_date(dataset_id, version_date)
+
         chunks = []
         extend = chunks.extend
         for stn_id in stn_ids:
-            c1 = self._get_results_chunks_filter(dataset_id, stn_id, time_interval, version_date, from_date, to_date, heights, bands)
+            c1 = self._get_results_chunks_filter(dataset_id, stn_id, time_interval, vd, from_date, to_date, heights, bands)
             extend(c1)
 
         ## Get results chunks
@@ -715,6 +727,8 @@ class Tethys(object):
 
         ## Filters
         ts_xr1 = result_filters(xr3, from_mod_date=from_mod_date, to_mod_date=to_mod_date)
+
+        ts_xr1.attrs['version_date'] = pd.Timestamp(vd).tz_localize(None).isoformat()
 
         ## Output
         ts_xr1 = process_results_output(ts_xr1, parameter, modified_date=False, quality_code=False, output=output, squeeze_dims=squeeze_dims)

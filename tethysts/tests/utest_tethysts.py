@@ -10,6 +10,7 @@ import pickle
 from shapely import wkb, wkt
 import orjson
 import tethys_utils as tu
+import numpy as np
 
 pd.options.display.max_columns = 10
 
@@ -214,9 +215,8 @@ bands: int = None
 squeeze_dims: bool = False
 output: str = 'Dataset'
 threads: int = 20
-include_chunk_vars: bool = False
 
-remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz', 'version': 4}
+remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
@@ -228,7 +228,8 @@ station_ids = '80ede07567c4d7cdd00b0954'
 
 dataset_id = 'bb20b3ef3dd4341ee30a2bf0'
 
-dataset_id = '696c580ebf3d80d9bc4d7bc1'
+dataset_id = '870e79441964b26f0908f732'
+station_ids = '8da1e6b2869430ab5aadc0e5'
 
 dataset_id = 'dddb02cd5cb7ae191311ab19'
 station_ids = '71369f685f7a5841a060a171'
@@ -237,8 +238,11 @@ dataset_id = '0b2bd62cc42f3096136f11e9'
 station_ids = 'c8db6013a9eb76705b5c80f2'
 ref = 'ashley'
 
+station_ids = 'c15ce95a56b39b6dfeea00e8'
+
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
+self = Tethys()
 
 rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
@@ -262,7 +266,7 @@ for d in self.datasets:
 
 results1 = self.get_results(dataset_id, 'fac7e3f6ee48113ccb30e446', heights=None)
 
-results1 = self.get_results(dataset_id, station_ids, heights=None, version_date='2022-03-16T00:00:00')
+results2 = self.get_results(dataset_id, station_ids, heights=[10], version_date='2022-03-01')
 
 
 station_ids = [s['station_id'] for s in stns1[:3]]
@@ -273,6 +277,45 @@ for s in stns1:
 
 
 
+### Tests
+remote1 = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
+remote2 = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
+
+ds_ids = ['c5f55d97e71e7cd73295ad7f', 'dddb02cd5cb7ae191311ab19', '0b2bd62cc42f3096136f11e9']
+
+t1 = Tethys([remote1])
+t2 = Tethys([remote2])
+
+for ds_id in ds_ids:
+    print('-- ds_id: ' + ds_id)
+    stns = t1.get_stations(ds_id)
+
+    stns0 = t2.get_stations(ds_id)
+
+    for stn in stns:
+        stn_id = stn['station_id']
+        print('-- stn_id: ' + stn_id)
+        base_ref = stn['ref']
+
+        if base_ref[-3] == '_':
+            old_ref = base_ref[:-3]
+        else:
+            old_ref = base_ref
+
+        stn0 = [s for s in stns0 if old_ref in s['ref']]
+
+        if stn0:
+            stn0 = stn0[0]
+            old_stn_id = stn0['station_id']
+
+            r1 = t1.get_results(ds_id, stn_id)
+            r1_prod = int(np.prod(list(dict(r1.dims).values())))
+
+            r2 = t2.get_results(ds_id, old_stn_id)
+            r2_prod = int(np.prod(list(dict(r2.dims).values())))
+
+            if r1_prod < r2_prod:
+                print('{ds_id}: old stn {old_stn_id}: {old_prod}, new stn {new_stn_id}: {new_prod}'.format(ds_id=ds_id, old_stn_id=old_stn_id, new_stn_id=stn_id, old_prod=r2_prod, new_prod=r1_prod))
 
 
 
@@ -281,19 +324,20 @@ for s in stns1:
 
 
 
+test_stn_dict = {'c5f55d97e71e7cd73295ad7f': [['91d7d738684b3b6d8e11acd9', '276a3e6428a700229b437626'], ['17c7c90057683b807ad77b10', '751946ea52d04e67639fea1c']],
+                 'dddb02cd5cb7ae191311ab19': [['91d7d738684b3b6d8e11acd9', '276a3e6428a700229b437626'], ['17c7c90057683b807ad77b10', '751946ea52d04e67639fea1c']],
+                 '0b2bd62cc42f3096136f11e9': [['91d7d738684b3b6d8e11acd9', '276a3e6428a700229b437626'], ['71cd89d47beb79712903eb10', '71369f685f7a5841a060a171'], ['17c7c90057683b807ad77b10', '751946ea52d04e67639fea1c']]}
 
 
+ds_id = 'c5f55d97e71e7cd73295ad7f'
 
 
+stn = [s for s in stns if s['station_id'] == '751946ea52d04e67639fea1c'][0]
+stn0 = [s for s in stns0 if s['station_id'] == '17c7c90057683b807ad77b10'][0]
 
+[s for s in stns if 'poroporo' in s['ref']]
 
-
-
-
-
-
-
-
+[s for s in stns0 if 'poroporo' in s['ref']]
 
 
 
