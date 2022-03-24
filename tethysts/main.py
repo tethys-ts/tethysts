@@ -405,8 +405,11 @@ class Tethys(object):
 
         if version_date is None:
             version_date = versions[-1]['version_date']
-
-        # TODO: maybe do a test to make sure that the passed version date exists?
+        else:
+            vd = pd.Timestamp(version_date)
+            vd_list = [v for v in versions if pd.Timestamp(v['version_date']) == vd]
+            if len(vd_list) == 0:
+                raise ValueError('version_date is not available.')
 
         return version_date
 

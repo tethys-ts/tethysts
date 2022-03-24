@@ -242,6 +242,7 @@ station_ids = 'c15ce95a56b39b6dfeea00e8'
 
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
+self = Tethys()
 
 rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
@@ -265,7 +266,7 @@ for d in self.datasets:
 
 results1 = self.get_results(dataset_id, 'fac7e3f6ee48113ccb30e446', heights=None)
 
-results2 = self.get_results(dataset_id, station_ids, heights=None, version_date='2022-03-17T00:00:00')
+results2 = self.get_results(dataset_id, station_ids, heights=[10], version_date='2022-03-01')
 
 
 station_ids = [s['station_id'] for s in stns1[:3]]
