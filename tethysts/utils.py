@@ -202,7 +202,7 @@ def get_nearest_from_extent(data,
         lons = data['lon'].values
         xy = cartesian_product(lons, lats)
         kdtree = spatial.cKDTree(xy)
-        dist, index = kdtree.query(np.array(geom_query))
+        dist, index = kdtree.query(geom_query.coords[0])
         lon_n, lat_n = xy[index]
 
     data1 = data.sel(lon=[lon_n], lat=[lat_n])
@@ -505,7 +505,7 @@ def convert_results_v2_to_v3(data):
     geo1 = Point(float(data['lon']), float(data['lat'])).wkb_hex
     data2 = data.assign_coords({'geometry': geo1})
     if 'virtual_station' in data2:
-        data2 = data2.drop('virtual_station')
+        data2 = data2.drop_vars('virtual_station')
 
     # data2['station_id'].attrs = data['station_id'].attrs
     data2['geometry'].attrs = {'long_name': 'The hexadecimal encoding of the Well-Known Binary (WKB) geometry', 'crs_EPSG': 4326}
@@ -743,7 +743,7 @@ def load_dataset(results, from_date=None, to_date=None):
         data = results
 
     chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
-    data = data.drop(chunk_vars)
+    data = data.drop_vars(chunk_vars)
 
     if isinstance(from_date, (str, pd.Timestamp, datetime)):
         from_date1 = pd.Timestamp(from_date)

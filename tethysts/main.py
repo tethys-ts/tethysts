@@ -473,7 +473,6 @@ class Tethys(object):
                     geometry: dict = None,
                     lat: float = None,
                     lon: float = None,
-                    distance: float = None,
                     from_date: Union[str, pd.Timestamp, datetime] = None,
                     to_date: Union[str, pd.Timestamp, datetime] = None,
                     from_mod_date: Union[str, pd.Timestamp, datetime] = None,
@@ -496,13 +495,11 @@ class Tethys(object):
         station_ids : str, list of str, or None
             The station_ids of the associated station.
         geometry : dict or None
-            A geometry in GeoJSON format. Can be either a point or a polygon. If it's a point, then the method will perform a nearest neighbor query and return one station.
+            A point geometry in GeoJSON format. If it's a point, then the method will perform a nearest neighbor query and return one station.
         lat : float or None
-            Instead of using the geometry parameter, optionally use lat and lon for the spatial queries. Both lat and lon must be passed for the spatial queries and will override the geometry parameter. If only lat and lon are passed, then the method performs a nearest neighbor query.
+            Instead of using the geometry parameter, optionally use lat and lon for the nearest neighbor spatial query. Both lat and lon must be passed for the spatial query and will override the geometry parameter.
         lon : float or None
             See lat description.
-        distance : float or None
-            See lat description. This should be in decimal degrees not meters.
         from_date : str, Timestamp, datetime, or None
             The start date of the selection.
         to_date : str, Timestamp, datetime, or None
@@ -551,7 +548,7 @@ class Tethys(object):
             stn_ids = [station_ids]
         elif isinstance(station_ids, list):
             stn_ids = station_ids
-        elif ((geom_type in ['Point', 'Polygon']) or (isinstance(lat, float) and isinstance(lon, float))):
+        elif ((geom_type in ['Point']) or (isinstance(lat, float) and isinstance(lon, float))):
             ## Get all stations
             if dataset_id not in self._stations:
                 _ = self.get_stations(dataset_id)
@@ -559,9 +556,9 @@ class Tethys(object):
             stn_dict = self._stations[dataset_id]
 
             # Run the spatial query
-            stn_ids = spatial_query(stn_dict, geometry, lat, lon, distance)
+            stn_ids = spatial_query(stn_dict, geometry, lat, lon, None)
         else:
-            raise ValueError('A station_id, geometry or a combination of lat and lon must be passed.')
+            raise ValueError('A station_id, point geometry or a combination of lat and lon must be passed.')
 
         ## Get results chunks
         self._load_results_chunks(dataset_id, stn_ids)
