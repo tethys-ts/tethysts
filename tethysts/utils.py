@@ -202,7 +202,7 @@ def get_nearest_from_extent(data,
         lons = data['lon'].values
         xy = cartesian_product(lons, lats)
         kdtree = spatial.cKDTree(xy)
-        dist, index = kdtree.query(np.array(geom_query))
+        dist, index = kdtree.query(np.array(geom_query.coords))
         lon_n, lat_n = xy[index]
 
     data1 = data.sel(lon=[lon_n], lat=[lat_n])

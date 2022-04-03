@@ -30,7 +30,7 @@ remotes_list = param['remotes']
 remote = {'bucket': 'fire-emergency-nz', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 2}
 remote = {'bucket': 'es-hilltop', 'connection_config': 'https://b2.tethys-ts.xyz'}
 remote = {'bucket': 'niwa-cliflo', 'connection_config': 'https://b2.tethys-ts.xyz'}
-remote = {'bucket': 'ecan-env-monitoring', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 2}
+remote = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 2}
 remote = {'bucket': 'point-forecasts', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
 remote = {'bucket': 'met-solutions', 'connection_config': 'https://b2.tethys-ts.xyz', 'version': 3}
 # remote = {'bucket': 'nasa-data', 'connection_config': 'https://b2.tethys-ts.xyz'}
@@ -155,7 +155,7 @@ geom_query = shape(query_geometry).buffer(0.1)
 
 stn_list2 = self.get_stations(dataset_id, query_geometry)
 stn_list2 = self.get_stations(dataset_id, lat=-43.1, lon=171.1)
-data2 = self.get_results(dataset_id, geometry=query_geometry, squeeze_dims=True, output='Dataset')
+data2 = self.get_results(dataset_id, geometry=query_geometry, output='Dataset')
 
 stn = [s for s in stn_list1 if s['station_id'] == station_id]
 
@@ -205,12 +205,12 @@ sdf2['y'] = sdf2.geometry.y.round(1)
 geometry: dict = None
 lat: float = None
 lon: float = None
-from_date: Union[str, pd.Timestamp, datetime] = None
-to_date: Union[str, pd.Timestamp, datetime] = None
-from_mod_date: Union[str, pd.Timestamp, datetime] = None
-to_mod_date: Union[str, pd.Timestamp, datetime] = None
-version_date: Union[str, pd.Timestamp, datetime] = None
-heights: Union[int, float] = None
+from_date = None
+to_date = None
+from_mod_date = None
+to_mod_date = None
+version_date = None
+heights = None
 bands: int = None
 squeeze_dims: bool = False
 output: str = 'Dataset'
@@ -220,6 +220,9 @@ remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'v
 remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
+remote = {'bucket': 'nasa-data', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
+remote = {'bucket': 'point-forecasts', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 
@@ -240,6 +243,20 @@ ref = 'ashley'
 
 station_ids = 'c15ce95a56b39b6dfeea00e8'
 
+dataset_id = '0de7cbfe05aebc2272ceba17'
+
+dataset_id = 'f56892eb59d12cfbc02acceb'
+
+dataset_id = 'c3a09c8a5da175897916e8e8'
+
+dataset_id = '799329b9023c9d9980abd1f6'
+
+dataset_id = '8d4afa6c8e82d91b81879c12'
+
+dataset_id = 'c3a09c8a5da175897916e8e8'
+
+dataset_id = '63a6144a796c05fc67813d46'
+
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
 self = Tethys()
@@ -247,7 +264,7 @@ self = Tethys()
 rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 
-station_ids = [s['station_id'] for s in stns1[:3]]
+station_ids = [s['station_id'] for s in stns1[:1]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
@@ -335,7 +352,7 @@ ds_id = 'c5f55d97e71e7cd73295ad7f'
 stn = [s for s in stns if s['station_id'] == '751946ea52d04e67639fea1c'][0]
 stn0 = [s for s in stns0 if s['station_id'] == '17c7c90057683b807ad77b10'][0]
 
-[s for s in stns if 'poroporo' in s['ref']]
+[s for s in stns1 if 'Waimak' in s['name']]
 
 [s for s in stns0 if 'poroporo' in s['ref']]
 
