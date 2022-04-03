@@ -142,7 +142,7 @@ def test_get_nearest_results2():
     assert len(s2) > 1
 
 
-def test_get_intersection_results1():
-    s3 = t1.get_results(dataset_id, lat=lat, lon=lon, distance=distance)
-
-    assert len(s3) > 1
+# def test_get_intersection_results1():
+#     s3 = t1.get_results(dataset_id, lat=lat, lon=lon, distance=distance)
+#
+#     assert len(s3) > 1
