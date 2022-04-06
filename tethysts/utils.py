@@ -376,16 +376,22 @@ def chunk_filters(results_chunks, version_date, time_interval=None, from_date=No
     rc2 = [rc for rc in results_chunks if rc['version_date'] == vd1]
 
     if len(rc2) == 0:
-        raise ValueError('version_date not in results chunks.')
+        return rc2
 
     ## Temporal filter
     if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc2[0]):
         from_date1 = int(pd.Timestamp(from_date).timestamp()/60/60/24)
         rc2 = [rc for rc in rc2 if (rc['chunk_day'] + time_interval) >= from_date1]
 
+    if len(rc2) == 0:
+        return rc2
+
     if isinstance(to_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc2[0]):
         to_date1 = int(pd.Timestamp(to_date).timestamp()/60/60/24)
         rc2 = [rc for rc in rc2 if rc['chunk_day'] <= to_date1]
+
+    if len(rc2) == 0:
+        return rc2
 
     ## Heights and bands filter
     if (heights is not None) and ('height' in rc2[0]):
@@ -396,6 +402,9 @@ def chunk_filters(results_chunks, version_date, time_interval=None, from_date=No
         else:
             raise TypeError('heights must be an int, float, or list of int/float.')
         rc2 = [rc for rc in rc2 if rc['height'] in h1]
+
+    if len(rc2) == 0:
+        return rc2
 
     if (bands is not None) and ('band' in rc2[0]):
         if isinstance(bands, int):

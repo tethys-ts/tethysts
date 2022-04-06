@@ -304,7 +304,7 @@ class Tethys(object):
     #     return results_versions, results_chunks
 
 
-    def _load_results_chunks(self, dataset_id: str, station_ids: List[str], threads=30):
+    def _load_results_chunks(self, dataset_id: str, station_ids: List[str], threads=50):
         """
 
         """

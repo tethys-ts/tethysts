@@ -223,6 +223,7 @@ remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz
 remote = {'bucket': 'nasa-data', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'point-forecasts', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'es-hilltop', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 
@@ -256,6 +257,8 @@ dataset_id = '8d4afa6c8e82d91b81879c12'
 dataset_id = 'c3a09c8a5da175897916e8e8'
 
 dataset_id = '63a6144a796c05fc67813d46'
+
+dataset_id = '6c848076f9825bf0eb59a4f2'
 
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
