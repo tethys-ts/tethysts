@@ -224,6 +224,7 @@ remote = {'bucket': 'nasa-data', 'public_url': 'https://b2.tethys-ts.xyz/file/',
 remote = {'bucket': 'point-forecasts', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'es-hilltop', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'nz-water-use', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 
@@ -254,11 +255,15 @@ dataset_id = '799329b9023c9d9980abd1f6'
 
 dataset_id = '8d4afa6c8e82d91b81879c12'
 
-dataset_id = 'c3a09c8a5da175897916e8e8'
+dataset_id = 'a6a4559d9c51956f2d759d43'
 
-dataset_id = '63a6144a796c05fc67813d46'
+dataset_id = 'bb20b3ef3dd4341ee30a2bf0'
 
-dataset_id = '6c848076f9825bf0eb59a4f2'
+dataset_id = 'e49afb6e95028206cf14cf61'
+
+dataset_id = '7cc8b402e168885ef69870ed'
+
+dataset_id = '361ce2acd56b13da82390a69'
 
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
@@ -267,16 +272,16 @@ self = Tethys()
 rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 
-station_ids = [s['station_id'] for s in stns1[:1]]
+station_ids = [s['station_id'] for s in stns1[:10]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
 
-results1 = self.get_results(dataset_id, station_ids, heights=[10])
+results1 = self.get_results(dataset_id, station_ids, heights=[0])
 
 results1 = self.get_results(dataset_id, station_ids, heights=[10], from_date='2021-04-01')
 
-results1 = self.get_results(dataset_id, station_ids, heights=None, from_date='2021-04-01')
+results1 = self.get_results(dataset_id, station_ids, heights=None, from_date='2015-04-01')
 
 
 for d in self.datasets:
@@ -360,7 +365,7 @@ stn0 = [s for s in stns0 if s['station_id'] == '17c7c90057683b807ad77b10'][0]
 [s for s in stns0 if 'poroporo' in s['ref']]
 
 
-
+ds1 = [d for d in self.datasets if d['product_code'] == 'quality_controlled_data']
 
 
 

@@ -14,7 +14,7 @@ from datetime import datetime
 import copy
 # from multiprocessing.pool import ThreadPool
 import concurrent.futures
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters, download_results, v2_v3_results_chunks, get_results_chunk, load_dataset
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters, download_results, v2_v3_results_chunks, load_dataset, make_run_date_key, update_nested
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
 from typing import List, Union
 import tethys_data_models as tdm
@@ -201,6 +201,7 @@ class Tethys(object):
                      lat: float = None,
                      lon: float = None,
                      distance: float = None,
+                     version_date: Union[str, datetime, pd.Timestamp] = None
                      ):
         """
         Method to return the stations associated with a dataset.
@@ -217,8 +218,8 @@ class Tethys(object):
             See lat description.
         distance : float or None
             See lat description. This should be in decimal degrees not meters.
-        results_object_keys : bool
-            Shoud the results object keys be returned? The results object keys list the available results in Tethys.
+        version_date: str in iso 8601 datetime format or None
+            The specific version of the stations data. None will return the latest version.
 
         Returns
         -------
@@ -228,23 +229,28 @@ class Tethys(object):
         remote = copy.deepcopy(self._remotes[dataset_id])
         version = remote.pop('version')
 
-        site_key = self._key_patterns[version]['stations'].format(dataset_id=dataset_id)
+        vd = self._get_version_date(dataset_id, version_date)
+        stn_key = self._get_stns_rc_key(dataset_id, 'stations', vd)
+
+        run_get = True
 
         if dataset_id in self._stations:
-            stn_dict = copy.deepcopy(self._stations[dataset_id])
-        else:
+            if vd in self._stations[dataset_id]:
+                stn_dict = copy.deepcopy(self._stations[dataset_id][vd])
+                run_get = False
+
+        if run_get:
             try:
-                remote['obj_key'] = site_key
+                remote['obj_key'] = stn_key
                 stn_obj = get_object_s3(**remote)
                 stn_list = read_json_zstd(stn_obj)
                 if version in [2, 3]:
                     _ = [stn.pop('results_object_key') for stn in stn_list]
                 stn_dict = {s['station_id']: s for s in stn_list if isinstance(s, dict)}
+                update_nested(self._stations, dataset_id, vd, stn_dict)
             except:
                 print('No stations.json.zst file in S3 bucket')
                 return None
-
-            self._stations.update({dataset_id: stn_dict})
 
         ## Spatial query
         stn_ids = spatial_query(stn_dict, geometry, lat, lon, distance)
@@ -254,102 +260,68 @@ class Tethys(object):
         else:
             stn_list1 = list(stn_dict.values())
 
-        # if not results_chunks:
-        #     [s.pop('results_object_key') for s in stn_list1]
-
         return stn_list1
 
 
-    # def _get_chunks_versions(self, dataset_id: str):
-    #     """
+    def _get_stns_rc_key(self, dataset_id: str, key_name, version_date: str = None):
+        """
 
-    #     """
-    #     if 'system_version' in self._datasets[dataset_id]:
-    #         remote = copy.deepcopy(self._remotes[dataset_id])
-    #         version = remote.pop('version')
+        """
+        if key_name not in ['results_chunks', 'stations']:
+            raise ValueError('key_name must be either results_chunks or stations.')
 
-    #         rv_key = self._key_patterns[version]['results_versions'].format(dataset_id=dataset_id)
-    #         remote['obj_key'] = rv_key
+        remote = copy.deepcopy(self._remotes[dataset_id])
+        system_version = remote.pop('version')
 
-    #         rv_obj = get_object_s3(**remote)
-    #         rv_list = read_json_zstd(rv_obj)
+        if version_date is None:
+            stn_key = self._key_patterns[system_version]['latest_' + key_name].format(dataset_id=dataset_id)
+        else:
+            # Check version_date
+            version_date = self._get_version_date(dataset_id, version_date)
 
-    #         results_versions = rv_list['results_versions']
+            vd_key = make_run_date_key(version_date)
+            stn_key = self._key_patterns[system_version][key_name].format(dataset_id=dataset_id, version_date=vd_key)
 
-    #         results_chunks = {}
-    #         for s in rv_list['results_chunks']:
-    #             stn_id = s['station_id']
-    #             s['version_date'] = pd.Timestamp(s['version_date']).tz_localize(None)
-    #             if stn_id in results_chunks:
-    #                 results_chunks[stn_id].append(s)
-    #             else:
-    #                 results_chunks[stn_id] = [s]
-
-    #     else:
-    #         ## Backwards compatibility
-    #         remote = copy.deepcopy(self._remotes[dataset_id])
-    #         version = remote.pop('version')
-
-    #         rok_key = self._key_patterns[version]['results_object_keys'].format(dataset_id=dataset_id)
-    #         remote['obj_key'] = rok_key
-
-    #         rok_obj = get_object_s3(**remote)
-    #         rok_list = read_json_zstd(rok_obj)
-
-    #         results_versions, results_chunks = v2_v3_results_chunks(rok_list)
-
-    #     self._versions[dataset_id] = results_versions
-    #     self._results_chunks[dataset_id] = results_chunks
-
-    #     return results_versions, results_chunks
+        return stn_key
 
 
-    def _load_results_chunks(self, dataset_id: str, station_ids: List[str], threads=50):
+    def _get_results_chunks(self, dataset_id: str, version_date: str = None):
         """
 
         """
         remote = copy.deepcopy(self._remotes[dataset_id])
-        version = remote.pop('version')
+        system_version = remote.pop('version')
+
+        run_get = True
 
         if dataset_id in self._results_chunks:
-            stn_ids = [stn_id for stn_id in station_ids if stn_id not in self._results_chunks[dataset_id]]
-        else:
-            stn_ids = station_ids
+            if version_date in self._results_chunks[dataset_id]:
+                rc_list = self._results_chunks[dataset_id][version_date]
+                run_get = False
 
-        if stn_ids:
-            if version in [2, 3]:
-                self._load_v2_v3_chunks_versions(dataset_id, remote, version)
+        if run_get:
+            if system_version in [2, 3]:
+                rc_list = self._get_v2_v3_chunks_versions(dataset_id, remote, system_version)
             else:
-                if 'connection_config' in remote:
-                    s3 = s3_client(remote['connection_config'], threads)
-                    remote['s3'] = s3
+                rc_key = self._get_stns_rc_key(dataset_id, 'results_chunks', version_date)
 
-                if len(stn_ids) == 1:
-                    chunks1 = get_results_chunk(dataset_id, stn_ids[0], remote, version)
-                else:
+                remote1 = copy.deepcopy(remote)
 
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+                remote1['obj_key'] = rc_key
+                stn_obj = get_object_s3(**remote1)
 
-                        futures = []
-                        for station_id in stn_ids:
-                            f = executor.submit(get_results_chunk, dataset_id, station_id, remote, version)
-                            futures.append(f)
-                        runs = concurrent.futures.wait(futures)
+                rc_list = read_json_zstd(stn_obj)
 
-                    chunks1 = {}
-                    _ = [chunks1.update(r.result()) for r in runs[0]]
+                update_nested(self._results_chunks, dataset_id, version_date, rc_list)
 
-                if dataset_id in self._results_chunks:
-                    self._results_chunks[dataset_id].update(chunks1)
-                else:
-                    self._results_chunks[dataset_id] = chunks1
+        return rc_list
 
 
-    def _load_v2_v3_chunks_versions(self, dataset_id: str, remote, version):
+    def _get_v2_v3_chunks_versions(self, dataset_id: str, remote, system_version):
         """
 
         """
-        rok_key = self._key_patterns[version]['results_object_keys'].format(dataset_id=dataset_id)
+        rok_key = self._key_patterns[system_version]['results_object_keys'].format(dataset_id=dataset_id)
         remote['obj_key'] = rok_key
 
         rok_obj = get_object_s3(**remote)
@@ -357,8 +329,12 @@ class Tethys(object):
 
         results_versions, results_chunks = v2_v3_results_chunks(rok_list)
 
+        vd = results_versions[-1]['version_date']
+
         self._versions[dataset_id] = results_versions
-        self._results_chunks[dataset_id] = results_chunks
+        update_nested(self._results_chunks, dataset_id, vd, results_chunks)
+
+        return results_chunks
 
 
     def get_versions(self, dataset_id: str):
@@ -379,7 +355,7 @@ class Tethys(object):
             version = remote.pop('version')
 
             if version in [2, 3]:
-                self._load_v2_v3_chunks_versions(dataset_id, remote, version)
+                _ = self._get_v2_v3_chunks_versions(dataset_id, remote, version)
             else:
                 rv_key = self._key_patterns[version]['versions'].format(dataset_id=dataset_id)
                 remote['obj_key'] = rv_key
@@ -404,23 +380,23 @@ class Tethys(object):
             versions = self._versions[dataset_id]
 
         if version_date is None:
-            version_date = versions[-1]['version_date']
+            vd = versions[-1]['version_date']
         else:
-            vd = pd.Timestamp(version_date)
-            vd_list = [v for v in versions if pd.Timestamp(v['version_date']) == vd]
+            vd = pd.Timestamp(version_date).tz_localize(None).isoformat()
+            vd_list = [v for v in versions if v['version_date'] == vd]
             if len(vd_list) == 0:
                 raise ValueError('version_date is not available.')
 
-        return version_date
+        return vd
 
 
-    def _get_results_chunks_filter(self, dataset_id: str, station_id: str, time_interval: int, version_date: Union[str, pd.Timestamp], from_date=None, to_date=None, heights=None, bands=None):
-        """
+    # def _get_results_chunks_filter(self, dataset_id: str, station_id: str, time_interval: int, version_date: Union[str, pd.Timestamp], from_date=None, to_date=None, heights=None, bands=None):
+    #     """
 
-        """
-        chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], version_date, time_interval, from_date, to_date, heights, bands)
+    #     """
+    #     chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], version_date, time_interval, from_date, to_date, heights, bands)
 
-        return chunks1
+    #     return chunks1
 
 
     def clear_cache(self, max_size=1000, max_age=7):
@@ -481,8 +457,8 @@ class Tethys(object):
                     heights: Union[List[Union[int, float]], Union[int, float]] = None,
                     bands: Union[List[int], int] = None,
                     squeeze_dims: bool = False,
-                    output: str = 'Dataset',
-                    threads: int = 20,
+                    output: str = 'xarray',
+                    threads: int = 30,
                     # include_chunk_vars: bool = False
                     ):
         """
@@ -518,21 +494,21 @@ class Tethys(object):
             Should all dimensions with a length of one be removed from the parameter's dimensions?
         output : str
             Output format of the results. Options are:
-                Dataset - return the entire contents of the netcdf file as an xarray Dataset,
-                DataArray - return the requested dataset parameter as an xarray DataArray,
-                Dict - return a dictionary of results from the DataArray,
-                json - return a json str of the Dict.
+                xarray - return the entire contents of the netcdf file as an xarray Dataset,
+                dict - return a dictionary of results from the DataArray,
+                json - return a json str of the dict.
 
         Returns
         -------
         Whatever the output was set to.
         """
-
         ## Get parameters
         dataset = self._datasets[dataset_id]
         parameter = dataset['parameter']
         remote = copy.deepcopy(self._remotes[dataset_id])
         version = remote.pop('version')
+
+        vd = self._get_version_date(dataset_id, version_date)
 
         if 'chunk_parameters' in dataset:
             time_interval = int(dataset['chunk_parameters']['time_interval'])
@@ -551,9 +527,9 @@ class Tethys(object):
         elif ((geom_type in ['Point']) or (isinstance(lat, float) and isinstance(lon, float))):
             ## Get all stations
             if dataset_id not in self._stations:
-                _ = self.get_stations(dataset_id)
+                _ = self.get_stations(dataset_id, version_date=vd)
 
-            stn_dict = self._stations[dataset_id]
+            stn_dict = self._stations[dataset_id][vd]
 
             # Run the spatial query
             stn_ids = spatial_query(stn_dict, geometry, lat, lon, None)
@@ -561,20 +537,14 @@ class Tethys(object):
             raise ValueError('A station_id, point geometry or a combination of lat and lon must be passed.')
 
         ## Get results chunks
-        self._load_results_chunks(dataset_id, stn_ids)
+        rc_list = self._get_results_chunks(dataset_id, vd)
 
-        vd = self._get_version_date(dataset_id, version_date)
-
-        chunks = []
-        extend = chunks.extend
-        for stn_id in stn_ids:
-            c1 = self._get_results_chunks_filter(dataset_id, stn_id, time_interval, vd, from_date, to_date, heights, bands)
-            extend(c1)
+        chunks = chunk_filters(rc_list, stn_ids, time_interval, from_date, to_date, heights, bands)
 
         ## Get results chunks
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             remote['cache'] = self.cache
-            if 'connection_config' in remote:
+            if not 'public_url' in remote:
                 s3 = s3_client(remote['connection_config'], threads)
                 remote['s3'] = s3
 
@@ -595,13 +565,10 @@ class Tethys(object):
             else:
                 chunks2[stn_id] = [c['chunk']]
 
-        # Open results
+        ## Open results
         # TODO: definitely not happy with the performance of combining datasets
-        # One way to improve the merging performance is to group the datasets by dimensions and combine those first, then combine the results of the groups.
-        # Another way would be to create a dataset with all nans with the final structure beforehand, then slicing the data in iteratively.
+        # I will probably need to organise and combine the objects one dimension at a time iteratively.
 
-        # tot = 0
-        # t1 = time()
         if isinstance(chunks2[stn_id][0], pathlib.Path):
 
             ## Get the encodings because xarray kills them later...
@@ -612,62 +579,14 @@ class Tethys(object):
 
             groups1 = []
             for stn, paths in chunks2.items():
-                # xr1 = xr.combine_by_coords([xr.load_dataset(c) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override')
                 xr1 = xr.combine_by_coords([load_dataset(c, from_date, to_date) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override', compat='override')
                 groups1.append(xr1)
 
-
-            # xr3 = xr.combine_by_coords(groups1, data_vars='minimal', coords='minimal')
-            # tot = time() - t1
-
-
-            # blank1 = xr.open_mfdataset(chunks1, combine='nested', compat="no_conflicts", engine='scipy')
-
-            # data_vars = set(blank1.data_vars)
-            # blank1['wind_speed'] = xr.full_like(blank1['wind_speed'], np.nan, blank1['wind_speed'].dtype)
-            # blank1.load()
-            # blank = blank1.copy()
-
-            # coords_list = list(blank.coords)
-            # dims_list = list(blank.dims)
-
-            # # for d in data_vars:
-            # #     blank1[d] = xr.full_like(blank1[d],
-
-            # for c in chunks1:
-            #     # print(c)
-            #     t1 = time()
-            #     with xr.load_dataset(c, engine='scipy') as c1:
-            #         # c2 = c1.transpose(*dims_list).copy()
-
-            #         # blank.loc[dict(lon=c2.lon, lat=c2.lat, height=c2.height, time=c2.time)]['wind_speed'] = c1['wind_speed']
-            #         # blank['wind_speed'] = xr.where(blank1['wind_speed'].loc[dict(lon=c1.lon, lat=c1.lat, height=c1.height, time=c1.time)], c1['wind_speed'], np.nan)
-            #         # blank = xr.where(blank.lon.isin(c1.lon) & blank.lat.isin(c1.lat) & blank.height.isin(c1.height) & blank.time.isin(c1.time) & blank.station_geometry.isin(c1.station_geometry) & blank.chunk_date.isin(c1.chunk_date), blank, c1)
-                    # blank.loc[dict(lon=c2.lon, lat=c2.lat, station_geometry=c2.station_geometry, chunk_date=c2.chunk_date, height=c2.height, time=c2.time)] = c1
-                    # xr3 = xr3.combine_first(c1)
-            #         # xr3 = xr3.merge(c1, overwrite_vars=data_vars)
-            #         # xr3 = xr3.merge(c1)
-            #         # xr3.update(c1)
-            #     tot1 = time() - t1
-            #     print(tot1)
-            #     tot = tot + tot1
-
             xr3 = groups1[0]
-            # data_vars = set(xr3.data_vars)
 
             if len(groups1) > 1:
                 for c in groups1[1:]:
-                    # print(c)
-                    # t1 = time()
                     xr3 = xr3.combine_first(c)
-                        # xr3 = xr3.merge(c1)
-                        # xr3.update(c1)
-
-            # tot = time() - t1
-
-            # xr3 = xr.open_mfdataset(chunks1, combine='nested', compat='override', engine='scipy')
-            # xr3 = xr.combine_by_coords([xr.load_dataset(c) for c in chunks1], data_vars='minimal', coords='minimal')
-            # xr3 = xr.merge([xr.load_dataset(c) for c in chunks1], compat='override')
         else:
             ## Get the encodings because xarray kills them later...
             temp1 = chunks2[stn_id][0]
@@ -677,22 +596,12 @@ class Tethys(object):
             for stn, data in chunks2.items():
                 xr1 = xr.combine_by_coords([load_dataset(d, from_date, to_date) for d in data], data_vars='minimal', coords='minimal', combine_attrs='override', compat='override')
                 groups1.append(xr1)
-            # data_vars = set(xr3.data_vars)
 
             xr3 = groups1[0]
 
             if len(groups1) > 1:
                 for c in groups1[1:]:
-                    # t1 = time()
                     xr3 = xr3.combine_first(c)
-                    # xr3 = xr3.merge(c)
-                    # tot1 = time() - t1
-                    # print(tot1)
-                    # tot = tot + tot1
-            # xr3 = xr.combine_by_coords(chunks1, data_vars='minimal', coords='minimal')
-            # xr3 = xr.merge(chunks1, compat='override')
-
-        # print(tot)
 
         del groups1
 
