@@ -15,12 +15,12 @@ pd.options.display.max_columns = 10
 
 remote1 = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
 
-remote2 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 3}
+# remote2 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 3}
 
 remote3 = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 
-dataset_id = 'f5b878a968d2c5bc404c07e5'
-station_ids = '9b46e9569369e969f6946ba3'
+dataset_id = '361ce2acd56b13da82390a69'
+station_ids = '0e1952877050606d5cf9c0db'
 
 # dataset_id = 'c3a09c8a5da175897916e8e8'
 # station_ids = '4db28a9db0cb036507490887'
@@ -36,16 +36,16 @@ remotes = [
           'results': 1,
           }
     },
-    {'remote': remote2,
-      'dataset_id': 'f27574a7b38eab5b0bc2b3d7',
-      'station_ids': '9c90243e84b8c5b17f0726c4',
-      'assert':
-          {'datasets': 1,
-          'stations': 1,
-          'versions': 0,
-          'results': 1,
-          }
-      },
+    # {'remote': remote2,
+    #   'dataset_id': 'f27574a7b38eab5b0bc2b3d7',
+    #   'station_ids': '9c90243e84b8c5b17f0726c4',
+    #   'assert':
+    #       {'datasets': 1,
+    #       'stations': 1,
+    #       'versions': 0,
+    #       'results': 1,
+    #       }
+    #   },
     {'remote': remote3,
      'dataset_id': dataset_id,
      'station_ids': station_ids,
@@ -58,7 +58,7 @@ remotes = [
      },
      ]
 
-outputs = ['Dataset', 'DataArray', 'Dict']
+outputs = ['xarray', 'dict', 'json']
 
 geometry1 = {'type': 'Point', 'coordinates': [172, -42.8]}
 # geometry2 = shape(geometry1).buffer(0.5)
@@ -90,7 +90,7 @@ def test_tethys(remote):
     assert len(rv1) > remote['assert']['versions']
 
     ## Results
-    data1 = t1.get_results(remote['dataset_id'], remote['station_ids'], output='Dataset')
+    data1 = t1.get_results(remote['dataset_id'], remote['station_ids'])
     assert len(data1) > remote['assert']['results']
 
 
@@ -102,14 +102,12 @@ t1 = Tethys([remote3])
 def test_get_results(output):
     data1 = t1.get_results(dataset_id, station_ids, squeeze_dims=True, output=output)
 
-    if output == 'Dataset':
+    if output == 'xarray':
         assert len(data1.time) > 90
-    elif output == 'DataArray':
-        assert len(data1.time) > 90
-    elif output == 'Dict':
+    elif output == 'dict':
         assert len(data1['coords']['time']['data']) > 90
-    else:
-        raise ValueError('Forgot to put in new assertion')
+    elif output == 'json':
+        assert len(data1) > 90
 
 
 def test_get_nearest_station1():

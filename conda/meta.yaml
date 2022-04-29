@@ -1,5 +1,5 @@
 {% set name = "tethysts" %}
-{% set version = "0.4.17" %}
+{% set version = "0.4.18" %}
 # {% set sha256 = "ae2cc83fb5a75e8dc3e1b2c2137deea412c8a4c7c9acca52bf4ec59de52a80c9" %}
 
 # sha256 is the prefered checksum -- you can get it for a file with:
@@ -44,7 +44,7 @@ requirements:
     - orjson
     - requests
     - shapely
-    - tethys-data-models>=0.4.6
+    - tethys-data-models==0.4.9
 
 test:
   imports:

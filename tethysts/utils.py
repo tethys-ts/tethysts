@@ -43,6 +43,34 @@ local_results_name = '{ds_id}/{stn_id}/{chunk_id}.{version_date}.{chunk_hash}.nc
 ### Helper functions
 
 
+def update_nested(in_dict, ds_id, version_date, value):
+    """
+
+    """
+    if ds_id in in_dict:
+        in_dict[ds_id][version_date] = value
+    else:
+        in_dict.update({ds_id: {version_date: value}})
+
+
+def make_run_date_key(run_date=None):
+    """
+
+    """
+    if run_date is None:
+        run_date = pd.Timestamp.today(tz='utc')
+        run_date_key = run_date.strftime('%Y%m%dT%H%M%SZ')
+    elif isinstance(run_date, pd.Timestamp):
+        run_date_key = run_date.strftime('%Y%m%dT%H%M%SZ')
+    elif isinstance(run_date, str):
+        run_date1 = pd.Timestamp(run_date).tz_localize(None)
+        run_date_key = run_date1.strftime('%Y%m%dT%H%M%SZ')
+    else:
+        raise TypeError('run_date must be None, Timestamp, or a string representation of a timestamp')
+
+    return run_date_key
+
+
 def create_public_s3_url(base_url, bucket, obj_key):
     """
     This should be updated as more S3 providers are added!
@@ -366,17 +394,14 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
     return ts_obj
 
 
-def chunk_filters(results_chunks, version_date, time_interval=None, from_date=None, to_date=None, heights=None, bands=None):
+def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, to_date=None, heights=None, bands=None):
     """
 
     """
-    ## Get the chunks associated with a specific version
-    vd1 = pd.Timestamp(version_date)
+    rc2 = copy.deepcopy(results_chunks)
 
-    rc2 = [rc for rc in results_chunks if rc['version_date'] == vd1]
-
-    if len(rc2) == 0:
-        return rc2
+    ## Stations filter
+    rc2 = [rc for rc in rc2 if rc['station_id'] in stn_ids]
 
     ## Temporal filter
     if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc2[0]):
@@ -452,7 +477,7 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
     return ts_xr1
 
 
-def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='DataArray', squeeze_dims=False,
+def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='xarray', squeeze_dims=False,
                            # include_chunk_vars: bool = False
                            ):
     """
@@ -479,32 +504,20 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
     if squeeze_dims:
         ts_xr = ts_xr.squeeze()
 
-    if output == 'Dataset':
+    if output == 'xarray':
         return ts_xr
 
-    elif output == 'DataArray':
-        return ts_xr[out_param]
-
-    elif output == 'Dict':
-        # darr = ts_xr[out_param]
-        darr = ts_xr
-        data_dict = darr.to_dict()
-        # if 'name' in data_dict:
-        #     data_dict.pop('name')
+    elif output == 'dict':
+        data_dict = ts_xr.to_dict()
 
         return data_dict
 
     elif output == 'json':
-        # darr = ts_xr[out_param]
-        darr = ts_xr
-        data_dict = darr.to_dict()
-        # if 'name' in data_dict:
-        #     data_dict.pop('name')
-        json1 = orjson.dumps(data_dict)
+        json1 = orjson.dumps(ts_xr.to_dict(), option=orjson.OPT_OMIT_MICROSECONDS | orjson.OPT_SERIALIZE_NUMPY)
 
         return json1
     else:
-        raise ValueError("output must be one of 'Dataset', 'DataArray', 'Dict', or 'json'")
+        raise ValueError("output must be one of 'xarray', 'dict', or 'json'")
 
 
 def convert_results_v2_to_v3(data):
@@ -667,7 +680,7 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
     """
     if isinstance(cache, pathlib.Path):
         chunk_hash = chunk['chunk_hash']
-        version_date = chunk['version_date'].strftime('%Y%m%d%H%M%SZ')
+        version_date = pd.Timestamp(chunk['version_date']).strftime('%Y%m%d%H%M%SZ')
         results_file_name = local_results_name.format(ds_id=chunk['dataset_id'], stn_id=chunk['station_id'], chunk_id=chunk['chunk_id'], version_date=version_date, chunk_hash=chunk_hash)
         chunk_path = cache.joinpath(results_file_name)
         chunk_path.parent.mkdir(parents=True, exist_ok=True)
@@ -698,7 +711,7 @@ def v2_v3_results_chunks(results_obj):
     """
     last_version = max([obj['results_object_key'][-1]['run_date'] for obj in results_obj])
 
-    results_chunks = {}
+    results_chunks = []
 
     for obj in results_obj:
         last_obj = obj['results_object_key'][-1]
@@ -711,35 +724,13 @@ def v2_v3_results_chunks(results_obj):
                'version_date': pd.Timestamp(last_version)
                }
 
-        results_chunks[obj['station_id']] = [rc1]
+        results_chunks.append(rc1)
 
     results_version = [{'dataset_id': obj['dataset_id'],
                'version_date': last_version,
                'modified_date': last_version}]
 
     return results_version, results_chunks
-
-
-def get_results_chunk(dataset_id, station_id, remote, version):
-    """
-
-    """
-    stn_key = tdm.key_patterns[version]['station'].format(dataset_id=dataset_id, station_id=station_id)
-
-    remote1 = copy.deepcopy(remote)
-
-    remote1['obj_key'] = stn_key
-    stn_obj = get_object_s3(**remote1)
-
-    stn_list = []
-    append = stn_list.append
-
-    for stn in read_json_zstd(stn_obj)['results_chunks']:
-        stn['version_date'] = pd.Timestamp(stn['version_date']).tz_localize(None)
-        append(stn)
-    stn_dict = {station_id: stn_list}
-
-    return stn_dict
 
 
 def load_dataset(results, from_date=None, to_date=None):
@@ -758,6 +749,7 @@ def load_dataset(results, from_date=None, to_date=None):
         from_date1 = pd.Timestamp(from_date)
     else:
         from_date1 = None
+
     if isinstance(to_date, (str, pd.Timestamp, datetime)):
         to_date1 = pd.Timestamp(to_date)
     else:
