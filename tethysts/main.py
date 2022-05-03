@@ -272,15 +272,12 @@ class Tethys(object):
 
         remote = copy.deepcopy(self._remotes[dataset_id])
         system_version = remote.pop('version')
+        
+        # Check version_date
+        version_date = self._get_version_date(dataset_id, version_date)
 
-        if version_date is None:
-            stn_key = self._key_patterns[system_version]['latest_' + key_name].format(dataset_id=dataset_id)
-        else:
-            # Check version_date
-            version_date = self._get_version_date(dataset_id, version_date)
-
-            vd_key = make_run_date_key(version_date)
-            stn_key = self._key_patterns[system_version][key_name].format(dataset_id=dataset_id, version_date=vd_key)
+        vd_key = make_run_date_key(version_date)
+        stn_key = self._key_patterns[system_version][key_name].format(dataset_id=dataset_id, version_date=vd_key)
 
         return stn_key
 
