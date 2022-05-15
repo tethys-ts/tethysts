@@ -255,8 +255,19 @@ def read_pkl_zstd(obj, unpickle=False):
     """
     dctx = zstd.ZstdDecompressor()
     if isinstance(obj, str):
-        with open(obj, 'rb') as p:
-            obj1 = dctx.decompress(p.read())
+        counter = 3
+        while True:
+            try:
+                with open(obj, 'rb') as p:
+                    obj1 = dctx.decompress(p.read())
+                break
+            except Exception as err:
+                print(str(err))
+                sleep(2)
+                counter = counter - 1
+                if counter <= 0:
+                    raise err
+
     elif isinstance(obj, bytes):
         obj1 = dctx.decompress(obj)
     else:
@@ -283,8 +294,18 @@ def read_json_zstd(obj):
     """
     dctx = zstd.ZstdDecompressor()
     if isinstance(obj, str):
-        with open(obj, 'rb') as p:
-            obj1 = dctx.decompress(p.read())
+        counter = 3
+        while True:
+            try:
+                with open(obj, 'rb') as p:
+                    obj1 = dctx.decompress(p.read())
+                break
+            except Exception as err:
+                print(str(err))
+                sleep(2)
+                counter = counter - 1
+                if counter <= 0:
+                    raise err
     elif isinstance(obj, bytes):
         obj1 = dctx.decompress(obj)
     else:
@@ -331,7 +352,7 @@ def s3_client(connection_config: dict, max_pool_connections: int = 30):
     return s3
 
 
-def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl=None, counter=5):
+def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl=None, version_id=None, counter=5):
     """
     General function to get an object from an S3 bucket. One of s3, connection_config, or public_url must be used.
 
@@ -356,9 +377,15 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
         bytes object of the S3 object.
     """
     counter1 = counter
+
+    get_dict = {'Key': obj_key, 'Bucket': bucket}
+
+    if isinstance(version_id, str):
+        get_dict['VersionId'] = version_id
+
     while True:
         try:
-            if isinstance(public_url, str):
+            if isinstance(public_url, str) and (version_id is None):
                 url = create_public_s3_url(public_url, bucket, obj_key)
                 resp = requests.get(url, timeout=300)
                 resp.raise_for_status()
@@ -366,7 +393,7 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
                 ts_obj = resp.content
 
             elif isinstance(s3, botocore.client.BaseClient):
-                ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
+                ts_resp = s3.get_object(**get_dict)
                 ts_obj = ts_resp.pop('Body').read()
 
             elif isinstance(connection_config, dict):
@@ -375,7 +402,7 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
 
                 s3 = s3_client(connection_config)
 
-                ts_resp = s3.get_object(Key=obj_key, Bucket=bucket)
+                ts_resp = s3.get_object(**get_dict)
                 ts_obj = ts_resp.pop('Body').read()
             else:
                 raise TypeError('One of s3, connection_config, or public_url needs to be correctly defined.')
@@ -761,7 +788,31 @@ def load_dataset(results, from_date=None, to_date=None):
     return data
 
 
+## Currently not working because of cloudflare CDN
+# def get_zstd_url_data(url, request_type='get', headers=None, chunk_size=524288, **kwargs):
+#     """
 
+#     """
+#     h1 = {'Accept-Encoding': 'zstd'}
+#     if isinstance(headers, dict):
+#         h1.update(headers)
+
+#     if request_type.lower() == 'get':
+#         r1 = requests.get
+#     elif request_type.lower() == 'post':
+#         r1 = requests.post
+#     else:
+#         raise ValueError('request_type must be either get or post.')
+
+#     with r1(url, stream=True, timeout=300, headers=h1) as r:
+#         r.raise_for_status()
+#         stream = ResponseStream(r.iter_content(chunk_size))
+
+#         dctx = zstd.ZstdDecompressor()
+#         with dctx.stream_reader(stream) as reader:
+#             data = reader.read()
+
+#     return data
 
 
 

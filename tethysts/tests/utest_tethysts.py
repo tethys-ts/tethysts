@@ -219,13 +219,14 @@ threads: int = 20
 remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
-remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
+# remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
 remote = {'bucket': 'nasa-data', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'point-forecasts', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'es-hilltop', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'nz-water-use', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'niwa-sos', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'orc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 
@@ -246,7 +247,7 @@ ref = 'ashley'
 
 station_ids = 'c15ce95a56b39b6dfeea00e8'
 
-dataset_id = '0de7cbfe05aebc2272ceba17'
+dataset_id = '9bf36a9e6b6a2a111bf6634b'
 
 dataset_id = 'f56892eb59d12cfbc02acceb'
 version_date='2022-04-29T12:05:04'
@@ -266,6 +267,9 @@ dataset_id = 'e49afb6e95028206cf14cf61'
 dataset_id = '7cc8b402e168885ef69870ed'
 
 dataset_id = 'c3a09c8a5da175897916e8e8'
+
+dataset_id = '6779bb1adf5ba7174f18aadf'
+dataset_id = '870e79441964b26f0908f732'
 
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
@@ -370,9 +374,7 @@ stn0 = [s for s in stns0 if s['station_id'] == '17c7c90057683b807ad77b10'][0]
 [s for s in stns0 if 'poroporo' in s['ref']]
 
 
-ds1 = [d for d in self.datasets if d['product_code'] == 'quality_controlled_data']
-
-
+ds1 = [d for d in self.datasets if d['owner'] == 'NZ Open Modelling Consortium']
 
 
 
