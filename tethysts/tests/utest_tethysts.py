@@ -271,6 +271,10 @@ dataset_id = 'c3a09c8a5da175897916e8e8'
 dataset_id = '6779bb1adf5ba7174f18aadf'
 dataset_id = '870e79441964b26f0908f732'
 
+dataset_id = '7588abfc49784d7425a9ab36'
+
+dataset_id = 'ef738a24e614c7848565ec81'
+
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
 self = Tethys()
@@ -374,14 +378,45 @@ stn0 = [s for s in stns0 if s['station_id'] == '17c7c90057683b807ad77b10'][0]
 [s for s in stns0 if 'poroporo' in s['ref']]
 
 
-ds1 = [d for d in self.datasets if d['owner'] == 'NZ Open Modelling Consortium']
+ds1 = [d for d in self.datasets if (d['owner'] == 'NZ Open Modelling Consortium') and (d['product_code'] == 'UC WRF NZ South Island Marlborough Nelson 1km')]
+
+ds1 = [d for d in self.datasets if (d['feature'] == 'atmosphere')]
 
 
 
 
+############################3
+### checks
+
+base_path = '/media/nvme1/cache/tethys/preprocessed_data'
 
 
+for i in range(1000000):
+    print(i)
+    check_compressor(obj)
+
+for i in range(1000000):
+    print(i)
+    check_writing(obj, base_path)
 
 
+with concurrent.futures.ProcessPoolExecutor(max_workers=3, mp_context=mp.get_context("spawn")) as executor:
+    futures = []
+    for i in range(1000000):
+        f = executor.submit(tu.misc.check_compressor, obj)
+        futures.append(f)
+    runs = concurrent.futures.wait(futures)
+
+chunks_list = [r.result() for r in runs[0]]
+
+
+with concurrent.futures.ProcessPoolExecutor(max_workers=3, mp_context=mp.get_context("spawn")) as executor:
+    futures = []
+    for i in range(1000000):
+        f = executor.submit(tu.misc.check_writing, obj, base_path)
+        futures.append(f)
+    runs = concurrent.futures.wait(futures)
+
+chunks_list = [r.result() for r in runs[0]]
 
 

@@ -253,22 +253,14 @@ def read_pkl_zstd(obj, unpickle=False):
     -------
     Python object
     """
-    dctx = zstd.ZstdDecompressor()
     if isinstance(obj, str):
-        counter = 3
-        while True:
-            try:
-                with open(obj, 'rb') as p:
-                    obj1 = dctx.decompress(p.read())
-                break
-            except Exception as err:
-                print(str(err))
-                sleep(2)
-                counter = counter - 1
-                if counter <= 0:
-                    raise err
+        with open(obj, 'rb') as p:
+            dctx = zstd.ZstdDecompressor()
+            with dctx.stream_reader(p) as reader:
+                obj1 = reader.read()
 
     elif isinstance(obj, bytes):
+        dctx = zstd.ZstdDecompressor()
         obj1 = dctx.decompress(obj)
     else:
         raise TypeError('obj must either be a str path or a bytes object')
@@ -292,21 +284,13 @@ def read_json_zstd(obj):
     -------
     Dict
     """
-    dctx = zstd.ZstdDecompressor()
     if isinstance(obj, str):
-        counter = 3
-        while True:
-            try:
-                with open(obj, 'rb') as p:
-                    obj1 = dctx.decompress(p.read())
-                break
-            except Exception as err:
-                print(str(err))
-                sleep(2)
-                counter = counter - 1
-                if counter <= 0:
-                    raise err
+        with open(obj, 'rb') as p:
+            dctx = zstd.ZstdDecompressor()
+            with dctx.stream_reader(p) as reader:
+                obj1 = reader.read()
     elif isinstance(obj, bytes):
+        dctx = zstd.ZstdDecompressor()
         obj1 = dctx.decompress(obj)
     else:
         raise TypeError('obj must either be a str path or a bytes object')
