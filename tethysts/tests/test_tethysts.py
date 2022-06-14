@@ -53,7 +53,7 @@ remotes = [
          {'datasets': 1,
           'stations': 1,
           'versions': 0,
-          'results': 1,
+          'results': 0,
           }
      },
      ]
@@ -131,13 +131,13 @@ def test_get_intersection_stations1():
 def test_get_nearest_results1():
     s1 = t1.get_results(dataset_id, geometry=geometry1)
 
-    assert len(s1) > 1
+    assert len(s1) > 0
 
 
 def test_get_nearest_results2():
     s2 = t1.get_results(dataset_id, lat=lat, lon=lon)
 
-    assert len(s2) > 1
+    assert len(s2) > 0
 
 
 # def test_get_intersection_results1():

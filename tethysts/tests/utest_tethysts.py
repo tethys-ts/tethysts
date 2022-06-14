@@ -227,13 +227,14 @@ remote = {'bucket': 'es-hilltop', 'public_url': 'https://b2.tethys-ts.xyz/file',
 remote = {'bucket': 'nz-water-use', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'niwa-sos', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'orc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'met-service', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 
 dataset_id = '752ee66d969cc09a16efebc7'
 station_ids = '80ede07567c4d7cdd00b0954'
 
-dataset_id = 'bb20b3ef3dd4341ee30a2bf0'
+dataset_id = 'fde8d7496cb5cda74b8bbe8d'
 
 dataset_id = '870e79441964b26f0908f732'
 station_ids = '8da1e6b2869430ab5aadc0e5'
@@ -275,6 +276,9 @@ dataset_id = '7588abfc49784d7425a9ab36'
 
 dataset_id = 'ef738a24e614c7848565ec81'
 
+dataset_id = '752ee66d969cc09a16efebc7'
+dataset_id = 'ff28976e766f2320b1404eaa'
+
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
 self = Tethys()
@@ -290,9 +294,9 @@ results1 = self.get_results(dataset_id, station_ids, heights=None)
 
 results1 = self.get_results(dataset_id, station_ids, heights=None, version_date=version_date)
 
-results1 = self.get_results(dataset_id, station_ids, heights=[0])
+results1 = self.get_results(dataset_id, station_ids, heights=[2])
 
-results1 = self.get_results(dataset_id, station_ids, heights=[10], from_date='2021-04-01')
+results1 = self.get_results(dataset_id, station_ids, heights=[0], from_date='2020-04-01')
 
 results1 = self.get_results(dataset_id, station_ids, heights=None, from_date='2015-04-01')
 
@@ -382,7 +386,7 @@ ds1 = [d for d in self.datasets if (d['owner'] == 'NZ Open Modelling Consortium'
 
 ds1 = [d for d in self.datasets if (d['feature'] == 'atmosphere')]
 
-
+ds1 = [d for d in self.datasets if (d['owner'] == 'MetService')]
 
 
 ############################3

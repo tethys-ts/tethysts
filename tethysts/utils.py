@@ -336,7 +336,7 @@ def s3_client(connection_config: dict, max_pool_connections: int = 30):
     return s3
 
 
-def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl=None, version_id=None, counter=5):
+def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl=None, version_id=None, range_start: int=None, range_end: int=None, counter=5):
     """
     General function to get an object from an S3 bucket. One of s3, connection_config, or public_url must be used.
 
@@ -367,6 +367,23 @@ def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = No
     if isinstance(version_id, str):
         get_dict['VersionId'] = version_id
 
+    ## Range
+    range_dict = {}
+
+    if range_start is not None:
+        range_dict['start'] = str(range_start)
+    else:
+        range_dict['start'] = ''
+
+    if range_end is not None:
+        range_dict['end'] = str(range_end)
+    else:
+        range_dict['end'] = ''
+
+    if range_dict:
+        get_dict['Range'] = 'bytes={start}-{end}'.format(**range_dict)
+
+    ## Get the object
     while True:
         try:
             if isinstance(public_url, str) and (version_id is None):
@@ -755,6 +772,10 @@ def load_dataset(results, from_date=None, to_date=None):
 
     chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
     data = data.drop_vars(chunk_vars)
+
+    if 'station_geometry' in data.dims:
+        stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
+        data = data.drop_vars(stn_vars)
 
     if isinstance(from_date, (str, pd.Timestamp, datetime)):
         from_date1 = pd.Timestamp(from_date)
