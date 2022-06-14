@@ -272,7 +272,7 @@ class Tethys(object):
 
         remote = copy.deepcopy(self._remotes[dataset_id])
         system_version = remote.pop('version')
-        
+
         # Check version_date
         version_date = self._get_version_date(dataset_id, version_date)
 
@@ -502,6 +502,10 @@ class Tethys(object):
         ## Get parameters
         dataset = self._datasets[dataset_id]
         parameter = dataset['parameter']
+        if 'result_type' in dataset:
+            result_type = dataset['result_type']
+        else:
+            result_type = ''
         remote = copy.deepcopy(self._remotes[dataset_id])
         version = remote.pop('version')
 
@@ -604,13 +608,14 @@ class Tethys(object):
 
         ## Add the encodings back and correct the float that should be int
         for v, enc in encoding.items():
-            _ = [enc.pop(d) for d in ['original_shape', 'source'] if d in enc]
-            xr3[v].encoding = enc
+            if v in xr3:
+                _ = [enc.pop(d) for d in ['original_shape', 'source'] if d in enc]
+                xr3[v].encoding = enc
 
-            dtype = enc['dtype'].name
+                dtype = enc['dtype'].name
 
-            if ('int' in dtype) and (not 'scale_factor' in enc) and (not 'calendar' in enc):
-                xr3[v] = xr3[v].astype(dtype)
+                if ('int' in dtype) and (not 'scale_factor' in enc) and (not 'calendar' in enc):
+                    xr3[v] = xr3[v].astype(dtype)
 
         ## Convert to new version
         attrs = xr3.attrs.copy()
@@ -625,7 +630,7 @@ class Tethys(object):
             xr3 = convert_results_v3_to_v4(xr3)
 
         ## Extra spatial query if data are stored in blocks
-        if ('station_geometry' in xr3) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
+        if ('grid' in result_type) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
             xr3 = get_nearest_from_extent(xr3, geometry, lat, lon)
 
         ## Filters
