@@ -548,72 +548,72 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
         raise ValueError("output must be one of 'xarray', 'dict', or 'json'")
 
 
-def convert_results_v2_to_v3(data):
-    """
-    Function to convert xarray Dataset results in verion 2 structure to version 3 structure.
-    """
-    geo1 = Point(float(data['lon']), float(data['lat'])).wkb_hex
-    data2 = data.assign_coords({'geometry': geo1})
-    if 'virtual_station' in data2:
-        data2 = data2.drop_vars('virtual_station')
+# def convert_results_v2_to_v3(data):
+#     """
+#     Function to convert xarray Dataset results in verion 2 structure to version 3 structure.
+#     """
+#     geo1 = Point(float(data['lon']), float(data['lat'])).wkb_hex
+#     data2 = data.assign_coords({'geometry': geo1})
+#     if 'virtual_station' in data2:
+#         data2 = data2.drop_vars('virtual_station')
 
-    # data2['station_id'].attrs = data['station_id'].attrs
-    data2['geometry'].attrs = {'long_name': 'The hexadecimal encoding of the Well-Known Binary (WKB) geometry', 'crs_EPSG': 4326}
+#     # data2['station_id'].attrs = data['station_id'].attrs
+#     data2['geometry'].attrs = {'long_name': 'The hexadecimal encoding of the Well-Known Binary (WKB) geometry', 'crs_EPSG': 4326}
 
-    data2 = data2.expand_dims('geometry')
-    # data2 = data2.expand_dims('height')
+#     data2 = data2.expand_dims('geometry')
+#     # data2 = data2.expand_dims('height')
 
-    # vars1 = list(data2.variables)
-    # param = [p for p in vars1 if 'dataset_id' in data2[p].attrs][0]
-    # param_attrs = data2[param].attrs
+#     # vars1 = list(data2.variables)
+#     # param = [p for p in vars1 if 'dataset_id' in data2[p].attrs][0]
+#     # param_attrs = data2[param].attrs
 
-    # if 'result_type' in data2[param].attrs:
-    #     _ = data2[param].attrs.pop('result_type')
-    # data2[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
+#     # if 'result_type' in data2[param].attrs:
+#     #     _ = data2[param].attrs.pop('result_type')
+#     # data2[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
 
-    # params = [param]
-    # if 'ancillary_variables' in param_attrs:
-    #     params.extend(param_attrs['ancillary_variables'].split(' '))
+#     # params = [param]
+#     # if 'ancillary_variables' in param_attrs:
+#     #     params.extend(param_attrs['ancillary_variables'].split(' '))
 
-    # for p in params:
-    #     data2[p] = data2[p].expand_dims('height')
+#     # for p in params:
+#     #     data2[p] = data2[p].expand_dims('height')
 
-    data2.attrs.update({'version': 3})
+#     data2.attrs.update({'version': 3})
 
-    return data2
+#     return data2
 
 
-def convert_results_v3_to_v4(data):
-    """
-    Function to convert xarray Dataset results in verion 3 structure to version 4 structure.
-    """
-    ## Change the extent to station_geometry
-    if 'extent' in list(data.coords):
-        data = data.rename({'extent': 'station_geometry'})
+# def convert_results_v3_to_v4(data):
+#     """
+#     Function to convert xarray Dataset results in verion 3 structure to version 4 structure.
+#     """
+#     ## Change the extent to station_geometry
+#     if 'extent' in list(data.coords):
+#         data = data.rename({'extent': 'station_geometry'})
 
-    ## Change spatial_distribution to result_type
-    vars1 = list(data.variables)
-    param = [p for p in vars1 if 'dataset_id' in data[p].attrs][0]
-    param_attrs = data[param].attrs
+#     ## Change spatial_distribution to result_type
+#     vars1 = list(data.variables)
+#     param = [p for p in vars1 if 'dataset_id' in data[p].attrs][0]
+#     param_attrs = data[param].attrs
 
-    if 'result_type' in param_attrs:
-        _ = data[param].attrs.pop('result_type')
-        data[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
+#     if 'result_type' in param_attrs:
+#         _ = data[param].attrs.pop('result_type')
+#         data[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
 
-    sd_attr = param_attrs.pop('spatial_distribution')
+#     sd_attr = param_attrs.pop('spatial_distribution')
 
-    if sd_attr == 'sparse':
-        result_type = 'time_series'
-    else:
-        result_type = 'grid'
+#     if sd_attr == 'sparse':
+#         result_type = 'time_series'
+#     else:
+#         result_type = 'grid'
 
-    data[param].attrs.update({'result_type': result_type})
+#     data[param].attrs.update({'result_type': result_type})
 
-    ## change base attrs
-    _ = data.attrs.pop('featureType')
-    data.attrs.update({'result_type': result_type, 'version': 4})
+#     ## change base attrs
+#     _ = data.attrs.pop('featureType')
+#     data.attrs.update({'result_type': result_type, 'version': 4})
 
-    return data
+#     return data
 
 
 # def read_in_chunks(file_object, chunk_size=524288):
@@ -702,7 +702,7 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
     return file_path2
 
 
-def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None):
+def download_results(index: dict, dims: list, chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None, from_date=None, to_date=None):
     """
 
     """
@@ -723,52 +723,12 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
                     f.write(obj1)
                 del obj1
 
-        return {'station_id': chunk['station_id'], 'chunk': chunk_path}
+        data = xr.open_dataset(chunk_path)
 
     else:
         obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
-        obj2 = xr.load_dataset(read_pkl_zstd(obj1))
+        data = xr.load_dataset(read_pkl_zstd(obj1))
         del obj1
-
-        return {'station_id': chunk['station_id'], 'chunk': obj2}
-
-
-def v2_v3_results_chunks(results_obj):
-    """
-    Function to convert version 2 and 3 data into result chunks and result versions. This conversion only keeps the last version of the results.
-    """
-    last_version = max([obj['results_object_key'][-1]['run_date'] for obj in results_obj])
-
-    results_chunks = []
-
-    for obj in results_obj:
-        last_obj = obj['results_object_key'][-1]
-        rc1 = {'chunk_id': '',
-               'chunk_hash': '',
-               'dataset_id': obj['dataset_id'],
-               'station_id': obj['station_id'],
-               'content_length': last_obj['content_length'],
-               'key': last_obj['key'],
-               'version_date': pd.Timestamp(last_version)
-               }
-
-        results_chunks.append(rc1)
-
-    results_version = [{'dataset_id': obj['dataset_id'],
-               'version_date': last_version,
-               'modified_date': last_version}]
-
-    return results_version, results_chunks
-
-
-def load_dataset(results, from_date=None, to_date=None):
-    """
-
-    """
-    if isinstance(results, (pathlib.Path, str)):
-        data = xr.load_dataset(results)
-    else:
-        data = results
 
     chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
     data = data.drop_vars(chunk_vars)
@@ -790,7 +750,141 @@ def load_dataset(results, from_date=None, to_date=None):
     if (to_date1 is not None) or (from_date1 is not None):
         data = data.sel(time=slice(from_date1, to_date1))
 
-    return data
+    stn_id = chunk['station_id']
+    if len(dims) == 1:
+        pos0 = chunk[dims[0]+'_pos']
+        index[stn_id][pos0] = data
+    elif len(dims) == 2:
+        pos0 = chunk[dims[0]+'_pos']
+        pos1 = chunk[dims[1]+'_pos']
+        index[stn_id][pos0][pos1] = data
+    elif len(dims) == 3:
+        pos0 = chunk[dims[0]+'_pos']
+        pos1 = chunk[dims[1]+'_pos']
+        pos2 = chunk[dims[2]+'_pos']
+        index[stn_id][pos0][pos1][pos2] = data
+
+
+# def v2_v3_results_chunks(results_obj):
+#     """
+#     Function to convert version 2 and 3 data into result chunks and result versions. This conversion only keeps the last version of the results.
+#     """
+#     last_version = max([obj['results_object_key'][-1]['run_date'] for obj in results_obj])
+
+#     results_chunks = []
+
+#     for obj in results_obj:
+#         last_obj = obj['results_object_key'][-1]
+#         rc1 = {'chunk_id': '',
+#                'chunk_hash': '',
+#                'dataset_id': obj['dataset_id'],
+#                'station_id': obj['station_id'],
+#                'content_length': last_obj['content_length'],
+#                'key': last_obj['key'],
+#                'version_date': pd.Timestamp(last_version)
+#                }
+
+#         results_chunks.append(rc1)
+
+#     results_version = [{'dataset_id': obj['dataset_id'],
+#                'version_date': last_version,
+#                'modified_date': last_version}]
+
+#     return results_version, results_chunks
+
+
+# def load_dataset(results, from_date=None, to_date=None):
+#     """
+
+#     """
+#     if isinstance(results, (pathlib.Path, str)):
+#         data = xr.load_dataset(results)
+#     else:
+#         data = results
+
+#     chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
+#     data = data.drop_vars(chunk_vars)
+
+#     if 'station_geometry' in data.dims:
+#         stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
+#         data = data.drop_vars(stn_vars)
+
+#     if isinstance(from_date, (str, pd.Timestamp, datetime)):
+#         from_date1 = pd.Timestamp(from_date)
+#     else:
+#         from_date1 = None
+
+#     if isinstance(to_date, (str, pd.Timestamp, datetime)):
+#         to_date1 = pd.Timestamp(to_date)
+#     else:
+#         to_date1 = None
+
+#     if (to_date1 is not None) or (from_date1 is not None):
+#         data = data.sel(time=slice(from_date1, to_date1))
+
+#     return data
+
+
+def nest_results(chunks):
+    """
+
+    """
+    ## Determine all of the dimensions
+    dim_order = ['chunk_day', 'height', 'band']
+    chunk = chunks[0]
+    dims = [dim for dim in chunk if dim in ['chunk_day', 'height', 'band']]
+    dims = [dim for dim in dim_order if dim in dims]
+
+    dims_set_dict = {}
+    for chunk in chunks:
+        stn_id = chunk['station_id']
+        if stn_id in dims_set_dict:
+            for dim in dims:
+                dims_set_dict[stn_id][dim].add(chunk[dim])
+        else:
+            dict1 = {}
+            for dim in dims:
+                dict1[dim] = set([chunk[dim]])
+            dims_set_dict[stn_id] = dict1
+
+    stn_index = {}
+    for stn_id, stn in dims_set_dict.items():
+        # stn_index[stn_id] = {}
+        dim_shape = []
+        for dim in dims:
+            len1 = len(stn[dim])
+            dim_shape.append(len1)
+            dims_set_dict[stn_id][dim] = list(stn[dim])
+            dims_set_dict[stn_id][dim].sort()
+        stn_index[stn_id] = np.zeros(tuple(dim_shape), dtype=int).tolist()
+
+    for chunk in chunks:
+        stn_id = chunk['station_id']
+        for dim in dims:
+            chunk[dim+'_pos'] = dims_set_dict[stn_id][dim].index(chunk[dim])
+
+    return chunks, stn_index, dims
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Currently not working because of cloudflare CDN
