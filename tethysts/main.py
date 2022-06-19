@@ -14,7 +14,7 @@ from datetime import datetime
 import copy
 # from multiprocessing.pool import ThreadPool
 import concurrent.futures
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4, s3_client, chunk_filters, download_results, v2_v3_results_chunks, load_dataset, make_run_date_key, update_nested
+from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, nest_results
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
 from typing import List, Union
 import tethys_data_models as tdm
@@ -244,8 +244,7 @@ class Tethys(object):
                 remote['obj_key'] = stn_key
                 stn_obj = get_object_s3(**remote)
                 stn_list = read_json_zstd(stn_obj)
-                if version in [2, 3]:
-                    _ = [stn.pop('results_object_key') for stn in stn_list]
+
                 stn_dict = {s['station_id']: s for s in stn_list if isinstance(s, dict)}
                 update_nested(self._stations, dataset_id, vd, stn_dict)
             except:
@@ -297,41 +296,38 @@ class Tethys(object):
                 run_get = False
 
         if run_get:
-            if system_version in [2, 3]:
-                rc_list = self._get_v2_v3_chunks_versions(dataset_id, remote, system_version)
-            else:
-                rc_key = self._get_stns_rc_key(dataset_id, 'results_chunks', version_date)
+            rc_key = self._get_stns_rc_key(dataset_id, 'results_chunks', version_date)
 
-                remote1 = copy.deepcopy(remote)
+            remote1 = copy.deepcopy(remote)
 
-                remote1['obj_key'] = rc_key
-                stn_obj = get_object_s3(**remote1)
+            remote1['obj_key'] = rc_key
+            stn_obj = get_object_s3(**remote1)
 
-                rc_list = read_json_zstd(stn_obj)
+            rc_list = read_json_zstd(stn_obj)
 
-                update_nested(self._results_chunks, dataset_id, version_date, rc_list)
+            update_nested(self._results_chunks, dataset_id, version_date, rc_list)
 
         return rc_list
 
 
-    def _get_v2_v3_chunks_versions(self, dataset_id: str, remote, system_version):
-        """
+    # def _get_v2_v3_chunks_versions(self, dataset_id: str, remote, system_version):
+    #     """
 
-        """
-        rok_key = self._key_patterns[system_version]['results_object_keys'].format(dataset_id=dataset_id)
-        remote['obj_key'] = rok_key
+    #     """
+    #     rok_key = self._key_patterns[system_version]['results_object_keys'].format(dataset_id=dataset_id)
+    #     remote['obj_key'] = rok_key
 
-        rok_obj = get_object_s3(**remote)
-        rok_list = read_json_zstd(rok_obj)
+    #     rok_obj = get_object_s3(**remote)
+    #     rok_list = read_json_zstd(rok_obj)
 
-        results_versions, results_chunks = v2_v3_results_chunks(rok_list)
+    #     results_versions, results_chunks = v2_v3_results_chunks(rok_list)
 
-        vd = results_versions[-1]['version_date']
+    #     vd = results_versions[-1]['version_date']
 
-        self._versions[dataset_id] = results_versions
-        update_nested(self._results_chunks, dataset_id, vd, results_chunks)
+    #     self._versions[dataset_id] = results_versions
+    #     update_nested(self._results_chunks, dataset_id, vd, results_chunks)
 
-        return results_chunks
+    #     return results_chunks
 
 
     def get_versions(self, dataset_id: str):
@@ -351,16 +347,13 @@ class Tethys(object):
             remote = copy.deepcopy(self._remotes[dataset_id])
             version = remote.pop('version')
 
-            if version in [2, 3]:
-                _ = self._get_v2_v3_chunks_versions(dataset_id, remote, version)
-            else:
-                rv_key = self._key_patterns[version]['versions'].format(dataset_id=dataset_id)
-                remote['obj_key'] = rv_key
+            rv_key = self._key_patterns[version]['versions'].format(dataset_id=dataset_id)
+            remote['obj_key'] = rv_key
 
-                rv_obj = get_object_s3(**remote)
-                rv_list = read_json_zstd(rv_obj)
+            rv_obj = get_object_s3(**remote)
+            rv_list = read_json_zstd(rv_obj)
 
-                self._versions[dataset_id] = rv_list
+            self._versions[dataset_id] = rv_list
 
         versions = self._versions[dataset_id]
 
@@ -541,6 +534,7 @@ class Tethys(object):
         rc_list = self._get_results_chunks(dataset_id, vd)
 
         chunks = chunk_filters(rc_list, stn_ids, time_interval, from_date, to_date, heights, bands)
+        chunks, index, dims = nest_results(chunks)
 
         ## Get results chunks
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
@@ -552,57 +546,44 @@ class Tethys(object):
             futures = []
             for chunk in chunks:
                 remote['chunk'] = chunk
+                remote['index'] = index
+                remote['dims'] = dims
+                remote['from_date'] = from_date
+                remote['to_date'] = to_date
                 f = executor.submit(download_results, **remote)
                 futures.append(f)
-            runs = concurrent.futures.wait(futures)
-
-        chunks1 = [r.result() for r in runs[0]]
-
-        chunks2 = {}
-        for c in chunks1:
-            stn_id = c['station_id']
-            if stn_id in chunks2:
-                chunks2[stn_id].append(c['chunk'])
-            else:
-                chunks2[stn_id] = [c['chunk']]
+            _ = concurrent.futures.wait(futures)
 
         ## Open results
         # TODO: definitely not happy with the performance of combining datasets
         # I will probably need to organise and combine the objects one dimension at a time iteratively.
 
-        if isinstance(chunks2[stn_id][0], pathlib.Path):
+        dim_len = len(dims)
+        if dim_len == 1:
+            temp1 = index[stn_ids[0]][0]
+        elif dim_len == 2:
+            temp1 = index[stn_ids[0]][0][0]
+        elif dim_len == 3:
+            temp1 = index[stn_ids[0]][0][0][0]
+        encoding = {v: temp1[v].encoding for v in list(temp1.variables) if ('chunk' not in v)}
 
-            ## Get the encodings because xarray kills them later...
-            temp1 = xr.open_dataset(chunks2[stn_id][0])
-            encoding = {v: temp1[v].encoding for v in list(temp1.variables) if ('chunk' not in v)}
-            temp1.close()
-            del temp1
+        if 'chunk_day' in dims:
+            time_pos = dims.index('chunk_day')
+            concat_dims = [dim for dim in dims if dim != 'chunk_day']
+            concat_dims.insert(time_pos, 'time')
 
-            groups1 = []
-            for stn, paths in chunks2.items():
-                xr1 = xr.combine_by_coords([load_dataset(c, from_date, to_date) for c in paths], data_vars='minimal', coords='minimal', combine_attrs='override', compat='override')
-                groups1.append(xr1)
+        groups1 = []
+        for stn_id, data_list in index.items():
+            xr1 = xr.combine_nested(data_list, concat_dims, data_vars='minimal', coords='minimal', combine_attrs='override', compat='override').load()
+            groups1.append(xr1)
 
-            xr3 = groups1[0]
+        del index
 
-            if len(groups1) > 1:
-                for c in groups1[1:]:
-                    xr3 = xr3.combine_first(c)
-        else:
-            ## Get the encodings because xarray kills them later...
-            temp1 = chunks2[stn_id][0]
-            encoding = {v: temp1[v].encoding for v in list(temp1.variables) if ('chunk' not in v)}
+        xr3 = groups1[0]
 
-            groups1 = []
-            for stn, data in chunks2.items():
-                xr1 = xr.combine_by_coords([load_dataset(d, from_date, to_date) for d in data], data_vars='minimal', coords='minimal', combine_attrs='override', compat='override')
-                groups1.append(xr1)
-
-            xr3 = groups1[0]
-
-            if len(groups1) > 1:
-                for c in groups1[1:]:
-                    xr3 = xr3.combine_first(c)
+        if len(groups1) > 1:
+            for c in groups1[1:]:
+                xr3 = xr3.combine_first(c)
 
         del groups1
 
@@ -621,13 +602,6 @@ class Tethys(object):
         attrs = xr3.attrs.copy()
         if 'version' in attrs:
             attrs['system_version'] = attrs.pop('version')
-
-        if ('system_version' not in attrs):
-            xr3 = convert_results_v2_to_v3(xr3)
-            attrs['system_version'] = 3
-
-        if attrs['system_version'] == 3:
-            xr3 = convert_results_v3_to_v4(xr3)
 
         ## Extra spatial query if data are stored in blocks
         if ('grid' in result_type) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
