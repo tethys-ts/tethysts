@@ -14,8 +14,8 @@ from datetime import datetime
 import copy
 # from multiprocessing.pool import ThreadPool
 import concurrent.futures
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, nest_results
-# from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, key_patterns, get_nearest_station, get_intersected_stations, spatial_query, convert_results_v2_to_v3, get_nearest_from_extent, read_pkl_zstd, public_remote_key, convert_results_v3_to_v4
+# from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, xr_concat
+from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, xr_concat
 from typing import List, Union
 import tethys_data_models as tdm
 import pathlib
@@ -484,8 +484,8 @@ class Tethys(object):
             Should all dimensions with a length of one be removed from the parameter's dimensions?
         output : str
             Output format of the results. Options are:
-                xarray - return the entire contents of the netcdf file as an xarray Dataset,
-                dict - return a dictionary of results from the DataArray,
+                xarray - return the results as an xarray Dataset,
+                dict - return a dictionary of results as a dictionary,
                 json - return a json str of the dict.
 
         Returns
@@ -534,7 +534,7 @@ class Tethys(object):
         rc_list = self._get_results_chunks(dataset_id, vd)
 
         chunks = chunk_filters(rc_list, stn_ids, time_interval, from_date, to_date, heights, bands)
-        chunks, index, dims = nest_results(chunks)
+        # chunks, index, dims = nest_results(chunks)
 
         ## Get results chunks
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
@@ -546,57 +546,16 @@ class Tethys(object):
             futures = []
             for chunk in chunks:
                 remote['chunk'] = chunk
-                remote['index'] = index
-                remote['dims'] = dims
                 remote['from_date'] = from_date
                 remote['to_date'] = to_date
                 f = executor.submit(download_results, **remote)
                 futures.append(f)
-            _ = concurrent.futures.wait(futures)
+            runs = concurrent.futures.wait(futures)
 
-        ## Open results
-        # TODO: definitely not happy with the performance of combining datasets
-        # I will probably need to organise and combine the objects one dimension at a time iteratively.
+        chunks1 = [r.result() for r in runs[0]]
 
-        dim_len = len(dims)
-        if dim_len == 1:
-            temp1 = index[stn_ids[0]][0]
-        elif dim_len == 2:
-            temp1 = index[stn_ids[0]][0][0]
-        elif dim_len == 3:
-            temp1 = index[stn_ids[0]][0][0][0]
-        encoding = {v: temp1[v].encoding for v in list(temp1.variables) if ('chunk' not in v)}
-
-        if 'chunk_day' in dims:
-            time_pos = dims.index('chunk_day')
-            concat_dims = [dim for dim in dims if dim != 'chunk_day']
-            concat_dims.insert(time_pos, 'time')
-
-        groups1 = []
-        for stn_id, data_list in index.items():
-            xr1 = xr.combine_nested(data_list, concat_dims, data_vars='minimal', coords='minimal', combine_attrs='override', compat='override').load()
-            groups1.append(xr1)
-
-        del index
-
-        xr3 = groups1[0]
-
-        if len(groups1) > 1:
-            for c in groups1[1:]:
-                xr3 = xr3.combine_first(c)
-
-        del groups1
-
-        ## Add the encodings back and correct the float that should be int
-        for v, enc in encoding.items():
-            if v in xr3:
-                _ = [enc.pop(d) for d in ['original_shape', 'source'] if d in enc]
-                xr3[v].encoding = enc
-
-                dtype = enc['dtype'].name
-
-                if ('int' in dtype) and (not 'scale_factor' in enc) and (not 'calendar' in enc):
-                    xr3[v] = xr3[v].astype(dtype)
+        ## combine results
+        xr3 = xr_concat(chunks1)
 
         ## Convert to new version
         attrs = xr3.attrs.copy()

@@ -213,8 +213,8 @@ version_date = None
 heights = None
 bands: int = None
 squeeze_dims: bool = False
-output: str = 'Dataset'
-threads: int = 20
+output: str = 'xarray'
+threads: int = 30
 
 remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
@@ -228,6 +228,7 @@ remote = {'bucket': 'nz-water-use', 'public_url': 'https://b2.tethys-ts.xyz/file
 remote = {'bucket': 'niwa-sos', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'orc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'met-service', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
+remote = {'bucket': 'tasman-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 
@@ -277,7 +278,9 @@ dataset_id = '7588abfc49784d7425a9ab36'
 dataset_id = 'ef738a24e614c7848565ec81'
 
 dataset_id = '752ee66d969cc09a16efebc7'
-dataset_id = 'ff28976e766f2320b1404eaa'
+dataset_id = 'a746aca4bd66981f148e680f'
+
+
 
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
@@ -287,14 +290,14 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:1]]
+station_ids = [s['station_id'] for s in stns1[:5]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
 
 results1 = self.get_results(dataset_id, station_ids, heights=None, version_date=version_date)
 
-results1 = self.get_results(dataset_id, station_ids, heights=[2])
+results1 = self.get_results(dataset_id, station_ids, heights=[10, 20, 30, 80])
 
 results1 = self.get_results(dataset_id, station_ids, heights=[0], from_date='2020-04-01')
 
