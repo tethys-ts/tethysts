@@ -27,6 +27,7 @@ from functools import partial
 from pydantic import HttpUrl
 import shutil
 import gzip
+import psutil
 
 pd.options.display.max_columns = 10
 
@@ -702,100 +703,21 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
     return file_path2
 
 
-# def download_results(index: dict, dims: list, chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None, from_date=None, to_date=None):
-#     """
-
-#     """
-#     if isinstance(cache, pathlib.Path):
-#         chunk_hash = chunk['chunk_hash']
-#         version_date = pd.Timestamp(chunk['version_date']).strftime('%Y%m%d%H%M%SZ')
-#         results_file_name = local_results_name.format(ds_id=chunk['dataset_id'], stn_id=chunk['station_id'], chunk_id=chunk['chunk_id'], version_date=version_date, chunk_hash=chunk_hash)
-#         chunk_path = cache.joinpath(results_file_name)
-#         chunk_path.parent.mkdir(parents=True, exist_ok=True)
-
-#         if not chunk_path.exists():
-#             if public_url is not None:
-#                 url = create_public_s3_url(public_url, bucket, chunk['key'])
-#                 _ = url_stream_to_file(url, chunk_path, compression='zstd')
-#             else:
-#                 obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
-#                 with open(chunk_path, 'wb') as f:
-#                     f.write(obj1)
-#                 del obj1
-
-#         data = xr.open_dataset(chunk_path)
-
-#     else:
-#         obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
-#         data = xr.load_dataset(read_pkl_zstd(obj1))
-#         del obj1
-
-#     chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
-#     data = data.drop_vars(chunk_vars)
-
-#     if 'station_geometry' in data.dims:
-#         stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
-#         data = data.drop_vars(stn_vars)
-
-#     if isinstance(from_date, (str, pd.Timestamp, datetime)):
-#         from_date1 = pd.Timestamp(from_date)
-#     else:
-#         from_date1 = None
-
-#     if isinstance(to_date, (str, pd.Timestamp, datetime)):
-#         to_date1 = pd.Timestamp(to_date)
-#     else:
-#         to_date1 = None
-
-#     if (to_date1 is not None) or (from_date1 is not None):
-#         data = data.sel(time=slice(from_date1, to_date1))
-
-#     stn_id = chunk['station_id']
-#     if len(dims) == 1:
-#         pos0 = chunk[dims[0]+'_pos']
-#         index[stn_id][pos0] = data
-#     elif len(dims) == 2:
-#         pos0 = chunk[dims[0]+'_pos']
-#         pos1 = chunk[dims[1]+'_pos']
-#         index[stn_id][pos0][pos1] = data
-#     elif len(dims) == 3:
-#         pos0 = chunk[dims[0]+'_pos']
-#         pos1 = chunk[dims[1]+'_pos']
-#         pos2 = chunk[dims[2]+'_pos']
-#         index[stn_id][pos0][pos1][pos2] = data
-
-
-def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None, from_date=None, to_date=None, return_raw=False):
+def load_dataset(results, from_date=None, to_date=None):
     """
 
     """
-    if isinstance(cache, pathlib.Path):
-        chunk_hash = chunk['chunk_hash']
-        version_date = pd.Timestamp(chunk['version_date']).strftime('%Y%m%d%H%M%SZ')
-        results_file_name = local_results_name.format(ds_id=chunk['dataset_id'], stn_id=chunk['station_id'], chunk_id=chunk['chunk_id'], version_date=version_date, chunk_hash=chunk_hash)
-        chunk_path = cache.joinpath(results_file_name)
-        chunk_path.parent.mkdir(parents=True, exist_ok=True)
-
-        if not chunk_path.exists():
-            if public_url is not None:
-                url = create_public_s3_url(public_url, bucket, chunk['key'])
-                _ = url_stream_to_file(url, chunk_path, compression='zstd')
-            else:
-                obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
-                with open(chunk_path, 'wb') as f:
-                    f.write(obj1)
-                del obj1
-
-        data = xr.open_dataset(chunk_path)
-
+    if isinstance(results, (pathlib.Path, str)):
+        data = xr.open_dataset(results)
+    elif isinstance(results, bytes):
+        try:
+            data = xr.load_dataset(read_pkl_zstd(results))
+        except:
+            data = xr.load_dataset(results)
+    elif isinstance(results, xr.Dataset):
+        data = results
     else:
-        obj1 = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
-
-        if return_raw:
-            return obj1
-
-        data = xr.load_dataset(read_pkl_zstd(obj1))
-        del obj1
+        raise TypeError('Not the right data type.')
 
     chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
     data = data.drop_vars(chunk_vars)
@@ -823,22 +745,80 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
     return data
 
 
+def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None, from_date=None, to_date=None, return_raw=False):
+    """
+
+    """
+    if isinstance(cache, pathlib.Path):
+        chunk_hash = chunk['chunk_hash']
+        version_date = pd.Timestamp(chunk['version_date']).strftime('%Y%m%d%H%M%SZ')
+        results_file_name = local_results_name.format(ds_id=chunk['dataset_id'], stn_id=chunk['station_id'], chunk_id=chunk['chunk_id'], version_date=version_date, chunk_hash=chunk_hash)
+        chunk_path = cache.joinpath(results_file_name)
+        chunk_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not chunk_path.exists():
+            if public_url is not None:
+                url = create_public_s3_url(public_url, bucket, chunk['key'])
+                _ = url_stream_to_file(url, chunk_path, compression='zstd')
+            else:
+                data_obj = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
+                with open(chunk_path, 'wb') as f:
+                    f.write(data_obj)
+
+        data_obj = chunk_path
+
+    else:
+        data_obj = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
+
+        if return_raw:
+            return data_obj
+
+    data = load_dataset(data_obj, from_date=from_date, to_date=to_date)
+
+    return data
+
+
 def xr_concat(datasets: List[xr.Dataset]):
     """
     A much more efficient concat/combine of xarray datasets. It's also much safer on memory.
     """
-    # Create the blank dataset with the variables
-    xr3 = xr.combine_by_coords([c.coords.to_dataset() for c in datasets])
+    # Get variables for the creation of blank dataset
+    coords_list = []
+    chunk_dict = {}
 
-    chunk0 = datasets[0]
-    for var in chunk0.data_vars:
-        dims = tuple(chunk0[var].dims)
+    for chunk in datasets:
+        coords_list.append(chunk.coords.to_dataset())
+        for var in chunk.data_vars:
+            if var not in chunk_dict:
+                dims = tuple(chunk[var].dims)
+                enc = chunk[var].encoding.copy()
+                dtype = chunk[var].dtype
+                _ = [enc.pop(d) for d in ['original_shape', 'source'] if d in enc]
+                var_dict = {'dims': dims, 'enc': enc, 'dtype': dtype, 'attrs': chunk[var].attrs}
+                chunk_dict[var] = var_dict
+
+    xr3 = xr.combine_by_coords(coords_list)
+
+    # Run checks
+    available_memory = getattr(psutil.virtual_memory(), 'available')
+    dims_dict = dict(xr3.coords.dims)
+    size = 0
+    for var, var_dict in chunk_dict.items():
+        dims = var_dict['dims']
+        dtype_size = var_dict['dtype'].itemsize
+        n_dims = np.prod([dims_dict[dim] for dim in dims])
+        size = size + (n_dims*dtype_size)
+
+    if size >= available_memory:
+        raise MemoryError('Trying to create a dataset of size {}MB, while there is only {}MB available.'.format(int(size*10**-6), int(available_memory*10**-6)))
+
+    # Create the blank dataset
+    for var, var_dict in chunk_dict.items():
+        dims = var_dict['dims']
         shape = tuple(xr3[c].shape[0] for c in dims)
-        xr3[var] = (dims, np.full(shape, np.nan, chunk0[var].dtype))
-        enc = chunk0[var].encoding.copy()
-        _ = [enc.pop(d) for d in ['original_shape', 'source'] if d in enc]
-        xr3[var].attrs = chunk0[var].attrs
-        xr3[var].encoding = enc
+        xr3[var] = (dims, np.full(shape, np.nan, var_dict['dtype']))
+        xr3[var].attrs = var_dict['attrs']
+        xr3[var].encoding = var_dict['enc']
 
     # Fill the dataset with data
     for chunk in datasets:
@@ -856,105 +836,8 @@ def xr_concat(datasets: List[xr.Dataset]):
     return xr3
 
 
-# def v2_v3_results_chunks(results_obj):
-#     """
-#     Function to convert version 2 and 3 data into result chunks and result versions. This conversion only keeps the last version of the results.
-#     """
-#     last_version = max([obj['results_object_key'][-1]['run_date'] for obj in results_obj])
-
-#     results_chunks = []
-
-#     for obj in results_obj:
-#         last_obj = obj['results_object_key'][-1]
-#         rc1 = {'chunk_id': '',
-#                'chunk_hash': '',
-#                'dataset_id': obj['dataset_id'],
-#                'station_id': obj['station_id'],
-#                'content_length': last_obj['content_length'],
-#                'key': last_obj['key'],
-#                'version_date': pd.Timestamp(last_version)
-#                }
-
-#         results_chunks.append(rc1)
-
-#     results_version = [{'dataset_id': obj['dataset_id'],
-#                'version_date': last_version,
-#                'modified_date': last_version}]
-
-#     return results_version, results_chunks
 
 
-# def load_dataset(results, from_date=None, to_date=None):
-#     """
-
-#     """
-#     if isinstance(results, (pathlib.Path, str)):
-#         data = xr.load_dataset(results)
-#     else:
-#         data = results
-
-#     chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
-#     data = data.drop_vars(chunk_vars)
-
-#     if 'station_geometry' in data.dims:
-#         stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
-#         data = data.drop_vars(stn_vars)
-
-#     if isinstance(from_date, (str, pd.Timestamp, datetime)):
-#         from_date1 = pd.Timestamp(from_date)
-#     else:
-#         from_date1 = None
-
-#     if isinstance(to_date, (str, pd.Timestamp, datetime)):
-#         to_date1 = pd.Timestamp(to_date)
-#     else:
-#         to_date1 = None
-
-#     if (to_date1 is not None) or (from_date1 is not None):
-#         data = data.sel(time=slice(from_date1, to_date1))
-
-#     return data
-
-
-# def nest_results(chunks):
-#     """
-
-#     """
-#     ## Determine all of the dimensions
-#     dim_order = ['chunk_day', 'height', 'band']
-#     chunk = chunks[0]
-#     dims = [dim for dim in chunk if dim in ['chunk_day', 'height', 'band']]
-#     dims = [dim for dim in dim_order if dim in dims]
-
-#     dims_set_dict = {}
-#     for chunk in chunks:
-#         stn_id = chunk['station_id']
-#         if stn_id in dims_set_dict:
-#             for dim in dims:
-#                 dims_set_dict[stn_id][dim].add(chunk[dim])
-#         else:
-#             dict1 = {}
-#             for dim in dims:
-#                 dict1[dim] = set([chunk[dim]])
-#             dims_set_dict[stn_id] = dict1
-
-#     stn_index = {}
-#     for stn_id, stn in dims_set_dict.items():
-#         # stn_index[stn_id] = {}
-#         dim_shape = []
-#         for dim in dims:
-#             len1 = len(stn[dim])
-#             dim_shape.append(len1)
-#             dims_set_dict[stn_id][dim] = list(stn[dim])
-#             dims_set_dict[stn_id][dim].sort()
-#         stn_index[stn_id] = np.zeros(tuple(dim_shape), dtype=int).tolist()
-
-#     for chunk in chunks:
-#         stn_id = chunk['station_id']
-#         for dim in dims:
-#             chunk[dim+'_pos'] = dims_set_dict[stn_id][dim].index(chunk[dim])
-
-#     return chunks, stn_index, dims
 
 
 

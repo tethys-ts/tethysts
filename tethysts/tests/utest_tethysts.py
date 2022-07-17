@@ -280,8 +280,6 @@ dataset_id = 'ef738a24e614c7848565ec81'
 dataset_id = '752ee66d969cc09a16efebc7'
 dataset_id = 'a746aca4bd66981f148e680f'
 
-
-
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
 self = Tethys()
@@ -290,7 +288,7 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:5]]
+station_ids = [s['station_id'] for s in stns1[:20]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
