@@ -27,7 +27,7 @@ from functools import partial
 from pydantic import HttpUrl
 import shutil
 import gzip
-import psutil
+# import psutil
 
 pd.options.display.max_columns = 10
 
@@ -800,17 +800,17 @@ def xr_concat(datasets: List[xr.Dataset]):
     xr3 = xr.combine_by_coords(coords_list)
 
     # Run checks
-    available_memory = getattr(psutil.virtual_memory(), 'available')
-    dims_dict = dict(xr3.coords.dims)
-    size = 0
-    for var, var_dict in chunk_dict.items():
-        dims = var_dict['dims']
-        dtype_size = var_dict['dtype'].itemsize
-        n_dims = np.prod([dims_dict[dim] for dim in dims])
-        size = size + (n_dims*dtype_size)
+    # available_memory = getattr(psutil.virtual_memory(), 'available')
+    # dims_dict = dict(xr3.coords.dims)
+    # size = 0
+    # for var, var_dict in chunk_dict.items():
+    #     dims = var_dict['dims']
+    #     dtype_size = var_dict['dtype'].itemsize
+    #     n_dims = np.prod([dims_dict[dim] for dim in dims])
+    #     size = size + (n_dims*dtype_size)
 
-    if size >= available_memory:
-        raise MemoryError('Trying to create a dataset of size {}MB, while there is only {}MB available.'.format(int(size*10**-6), int(available_memory*10**-6)))
+    # if size >= available_memory:
+    #     raise MemoryError('Trying to create a dataset of size {}MB, while there is only {}MB available.'.format(int(size*10**-6), int(available_memory*10**-6)))
 
     # Create the blank dataset
     for var, var_dict in chunk_dict.items():
