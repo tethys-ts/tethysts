@@ -506,29 +506,10 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
     return ts_xr1
 
 
-def process_results_output(ts_xr, parameter, modified_date=False, quality_code=False, output='xarray', squeeze_dims=False,
-                           # include_chunk_vars: bool = False
-                           ):
+def process_results_output(ts_xr, output='xarray', squeeze_dims=False):
     """
 
     """
-    out_param = [parameter]
-
-    if quality_code:
-        if 'quality_code' in ts_xr:
-            out_param.extend(['quality_code'])
-
-    if modified_date:
-        if 'modified_date' in ts_xr:
-            out_param.extend(['modified_date'])
-
-    if len(out_param) == 1:
-        out_param = out_param[0]
-
-    # if not include_chunk_vars:
-    #     chunk_vars = [v for v in list(ts_xr.variables) if 'chunk' in v]
-    #     ts_xr = ts_xr.drop(chunk_vars)
-
     ## Return
     if squeeze_dims:
         ts_xr = ts_xr.squeeze()
@@ -547,74 +528,6 @@ def process_results_output(ts_xr, parameter, modified_date=False, quality_code=F
         return json1
     else:
         raise ValueError("output must be one of 'xarray', 'dict', or 'json'")
-
-
-# def convert_results_v2_to_v3(data):
-#     """
-#     Function to convert xarray Dataset results in verion 2 structure to version 3 structure.
-#     """
-#     geo1 = Point(float(data['lon']), float(data['lat'])).wkb_hex
-#     data2 = data.assign_coords({'geometry': geo1})
-#     if 'virtual_station' in data2:
-#         data2 = data2.drop_vars('virtual_station')
-
-#     # data2['station_id'].attrs = data['station_id'].attrs
-#     data2['geometry'].attrs = {'long_name': 'The hexadecimal encoding of the Well-Known Binary (WKB) geometry', 'crs_EPSG': 4326}
-
-#     data2 = data2.expand_dims('geometry')
-#     # data2 = data2.expand_dims('height')
-
-#     # vars1 = list(data2.variables)
-#     # param = [p for p in vars1 if 'dataset_id' in data2[p].attrs][0]
-#     # param_attrs = data2[param].attrs
-
-#     # if 'result_type' in data2[param].attrs:
-#     #     _ = data2[param].attrs.pop('result_type')
-#     # data2[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
-
-#     # params = [param]
-#     # if 'ancillary_variables' in param_attrs:
-#     #     params.extend(param_attrs['ancillary_variables'].split(' '))
-
-#     # for p in params:
-#     #     data2[p] = data2[p].expand_dims('height')
-
-#     data2.attrs.update({'version': 3})
-
-#     return data2
-
-
-# def convert_results_v3_to_v4(data):
-#     """
-#     Function to convert xarray Dataset results in verion 3 structure to version 4 structure.
-#     """
-#     ## Change the extent to station_geometry
-#     if 'extent' in list(data.coords):
-#         data = data.rename({'extent': 'station_geometry'})
-
-#     ## Change spatial_distribution to result_type
-#     vars1 = list(data.variables)
-#     param = [p for p in vars1 if 'dataset_id' in data[p].attrs][0]
-#     param_attrs = data[param].attrs
-
-#     if 'result_type' in param_attrs:
-#         _ = data[param].attrs.pop('result_type')
-#         data[param].attrs.update({'spatial_distribution': 'sparse', 'geometry_type': 'Point', 'grouping': 'none'})
-
-#     sd_attr = param_attrs.pop('spatial_distribution')
-
-#     if sd_attr == 'sparse':
-#         result_type = 'time_series'
-#     else:
-#         result_type = 'grid'
-
-#     data[param].attrs.update({'result_type': result_type})
-
-#     ## change base attrs
-#     _ = data.attrs.pop('featureType')
-#     data.attrs.update({'result_type': result_type, 'version': 4})
-
-#     return data
 
 
 # def read_in_chunks(file_object, chunk_size=524288):
@@ -636,17 +549,6 @@ def local_file_byte_iterator(path, chunk_size=DEFAULT_BUFFER_SIZE):
         file_iterator = iter(reader, bytes())
         for chunk in file_iterator:
             yield from chunk
-
-
-# def file_byte_iterator(file, chunk_size=DEFAULT_BUFFER_SIZE):
-#     """given a path, return an iterator over the file
-#     that lazily loads the file.
-#     https://stackoverflow.com/a/37222446/6952674
-#     """
-#     reader = partial(file.read, chunk_size)
-#     file_iterator = iter(reader, bytes())
-#     for chunk in file_iterator:
-#         yield from chunk
 
 
 def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):

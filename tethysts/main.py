@@ -310,26 +310,6 @@ class Tethys(object):
         return rc_list
 
 
-    # def _get_v2_v3_chunks_versions(self, dataset_id: str, remote, system_version):
-    #     """
-
-    #     """
-    #     rok_key = self._key_patterns[system_version]['results_object_keys'].format(dataset_id=dataset_id)
-    #     remote['obj_key'] = rok_key
-
-    #     rok_obj = get_object_s3(**remote)
-    #     rok_list = read_json_zstd(rok_obj)
-
-    #     results_versions, results_chunks = v2_v3_results_chunks(rok_list)
-
-    #     vd = results_versions[-1]['version_date']
-
-    #     self._versions[dataset_id] = results_versions
-    #     update_nested(self._results_chunks, dataset_id, vd, results_chunks)
-
-    #     return results_chunks
-
-
     def get_versions(self, dataset_id: str):
         """
         Function to get the versions of a particular dataset.
@@ -378,15 +358,6 @@ class Tethys(object):
                 raise ValueError('version_date is not available.')
 
         return vd
-
-
-    # def _get_results_chunks_filter(self, dataset_id: str, station_id: str, time_interval: int, version_date: Union[str, pd.Timestamp], from_date=None, to_date=None, heights=None, bands=None):
-    #     """
-
-    #     """
-    #     chunks1 = chunk_filters(self._results_chunks[dataset_id][station_id], version_date, time_interval, from_date, to_date, heights, bands)
-
-    #     return chunks1
 
 
     def clear_cache(self, max_size=1000, max_age=7):
@@ -572,99 +543,9 @@ class Tethys(object):
         ts_xr1.attrs['version_date'] = pd.Timestamp(vd).tz_localize(None).isoformat()
 
         ## Output
-        ts_xr1 = process_results_output(ts_xr1, parameter, modified_date=False, quality_code=False, output=output, squeeze_dims=squeeze_dims)
+        ts_xr1 = process_results_output(ts_xr1, output=output, squeeze_dims=squeeze_dims)
 
         return ts_xr1
-
-
-    # def get_bulk_results(self,
-    #                      dataset_id: str,
-    #                      station_ids: List[str],
-    #                      geometry: Optional[dict] = None,
-    #                      lat: Optional[float] = None,
-    #                      lon: Optional[float] = None,
-    #                      from_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                      to_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                      from_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                      to_mod_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                      modified_date: Optional[bool] = False,
-    #                      quality_code: Optional[bool] = False,
-    #                      run_date: Union[str, pd.Timestamp, datetime, None] = None,
-    #                      squeeze_dims: Optional[bool] = False,
-    #                      output: str = 'Dataset',
-    #                      cache: Optional[str] = None,
-    #                      threads: int = 30):
-    #     """
-    #     Function to bulk query the time series data given a specific dataset_id and a list of station_ids. The output will be specified by the output parameter and will be concatenated along the station_id dimension.
-
-    #     Parameters
-    #     ----------
-    #     dataset_id : str
-    #         The hashed str of the dataset_id.
-    #     station_ids : list of str
-    #         A list of hashed str of the site_ids.
-    #     geometry : dict or None
-    #         A geometry in GeoJSON format. Can be either a point or a polygon. If it's a point, then the method will perform a nearest neighbor query and return one station.
-    #     lat : float or None
-    #         Instead of using the geometry parameter, optionally use lat and lon for the spatial queries. Both lat and lon must be passed for the spatial queries and will override the geometry parameter. If only lat and lon are passed, then the method performs a nearest neighbor query.
-    #     lon : float or None
-    #         See lat description.
-    #     from_date : str, Timestamp, datetime, or None
-    #         The start date of the selection.
-    #     to_date : str, Timestamp, datetime, or None
-    #         The end date of the selection.
-    #     from_mod_date : str, Timestamp, datetime, or None
-    #         Only return data post the defined modified date.
-    #     to_mod_date : str, Timestamp, datetime, or None
-    #         Only return data prior to the defined modified date.
-    #     modified_date : bool
-    #         Should the modified dates be returned if they exist?
-    #     quality_code : bool
-    #         Should the quality codes be returned if they exist?
-    #     run_date : str or Timestamp
-    #         The run_date of the results to be returned. Defaults to None which will return the last run date.
-    #     squeeze_dims : bool
-    #         Should all dimensions with a length of one be removed from the parameter's dimensions?
-    #     output : str
-    #         Output format of the results. Options are:
-    #             Dataset - return the entire contents of the netcdf file as an xarray Dataset,
-    #             DataArray - return the requested dataset parameter as an xarray DataArray,
-    #             Dict - return a dictionary of results from the DataArray,
-    #             json - return a json str of the Dict.
-    #     cache : str or None
-    #         How the results should be cached. Current options are None (which does not cache) and 'memory' (which caches the results in the Tethys object in memory).
-    #     threads : int
-    #         The number of simultaneous downloads.
-
-    #     Returns
-    #     -------
-    #     Format specified by the output parameter
-    #         Will be concatenated along the station_id dimension
-    #     """
-    #     dataset = self._datasets[dataset_id]
-    #     parameter = dataset['parameter']
-
-    #     lister = [(dataset_id, s, geometry, lat, lon, from_date, to_date, from_mod_date, to_mod_date, modified_date, quality_code, run_date, False, 'Dataset', cache) for s in station_ids]
-
-    #     output1 = ThreadPool(threads).starmap(self.get_results, lister)
-    #     # output2 = [d if 'station_id' in list(d.coords) else d.expand_dims('station_id').set_coords('station_id') for d in output1]
-
-    #     if 'geometry' in output1[0]:
-    #         # deal with the situation where the variable names are not the same for all datasets
-    #         try:
-    #             xr_ds1 = xr.combine_nested(output1, 'geometry', data_vars='minimal', combine_attrs="override")
-    #         except:
-    #             xr_ds1 = xr.merge(output1, combine_attrs="override")
-    #     else:
-    #         try:
-    #             xr_ds1 = xr.combine_by_coords(output1, data_vars='minimal')
-    #         except:
-    #             xr_ds1 = xr.merge(output1, combine_attrs="override")
-
-    #     ## Output
-    #     output3 = process_results_output(xr_ds1, parameter, modified_date, quality_code, output, squeeze_dims)
-
-    #     return output3
 
 
 
