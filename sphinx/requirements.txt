@@ -1,0 +1,6 @@
+pandas==1.4.1
+tethysts==0.4.23
+tethys-data-models==0.4.9
+numpydoc
+ipython
+matplotlib
