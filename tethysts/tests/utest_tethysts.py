@@ -425,3 +425,74 @@ with concurrent.futures.ProcessPoolExecutor(max_workers=3, mp_context=mp.get_con
 chunks_list = [r.result() for r in runs[0]]
 
 
+
+
+remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}]
+dataset_id = 'b5d84aa773de2a747079c127'
+station_id = 'f9c61373e7ca386c1fab06db'
+geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
+lon = 172.0
+lat = -42.8
+distance = 0.2
+
+
+ts = Tethys()
+datasets = ts.datasets
+my_dataset = [d for d in datasets if (d['parameter'] == 'precipitation') and
+                                     (d['product_code'] == 'raw_data') and
+                                     (d['frequency_interval'] == '24H') and
+                                     (d['owner'] == 'Environment Canterbury')][0]
+
+
+stations = ts.get_stations(dataset_id)
+my_station = [s for s in stations if (s['name'] == "Waimakariri at Arthur's Pass")][0]
+my_station = ts.get_stations(dataset_id, geometry=geometry)
+my_stations = ts.get_stations(dataset_id, lat=lat, lon=lon, distance=distance)
+results = ts.get_results(dataset_id, station_id, output='xarray')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -22,9 +22,9 @@ Import the Tethys class:
    from tethysts import Tethys
    from pprint import pprint as print
 
-   remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}]
+   remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}]
    dataset_id = 'b5d84aa773de2a747079c127'
-   station_id = '4db28a9db0cb036507490887'
+   station_id = 'f9c61373e7ca386c1fab06db'
 
 .. code:: python
 
@@ -56,7 +56,7 @@ Some datasets are not available through the public repository. Accessing private
 
     from tethysts import Tethys
 
-    remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}]
+    remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}]
 
 
 Initialise the class with the remotes to get the metadata about the available datasets:
@@ -131,12 +131,12 @@ The get_results method has many input options. Take a look at the reference page
 
 .. ipython:: python
 
-  station_id = '4db28a9db0cb036507490887'
+  station_id = 'f9c61373e7ca386c1fab06db'
 
-  results = ts.get_results(dataset_id, station_id, output='Dataset')
+  results = ts.get_results(dataset_id, station_id, output='xarray')
   results
 
-Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the dataset metadata and station data. Other options include an xarray DataArray, dictionary, and JSON. If the results represent geospatially sparse data, then the results are indexed by geometry, height, and time. If the results represent gridded data, then the results are indexed by lat, lon, height, and time. The geometry dimension is a hexadecimal encoded Well-Known Binary (WKB) representation of the geometry. This was used to be flexible on the geometry type (i.e. points, lines, or polygons) and the WKB ensures that the geometry is stored accurately. This is a standard format by the Open Geospatial Consortium (OGC) and can be parsed by many programs including shapely, PostGIS, etc. Using WKB in a geometry dimension does not follow CF conventions. This was a trade off between flexibility, simplicity, and following standards. I picked flexibility and simplicity.
+Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the dataset metadata. Other options include a python dictionary and JSON. If the results represent geospatially sparse data, then the results are indexed by geometry, height, and time. If the results represent gridded data, then the results are indexed by lat, lon, height, and time. The geometry dimension is a hexadecimal encoded Well-Known Binary (WKB) representation of the geometry. This was used to be flexible on the geometry type (i.e. points, lines, or polygons) and the WKB ensures that the geometry is stored accurately. This is a standard format by the Open Geospatial Consortium (OGC) and can be parsed by many programs including shapely, PostGIS, etc. Using WKB in a geometry dimension does not follow CF conventions. This was a trade off between flexibility, simplicity, and following standards. I picked flexibility and simplicity.
 
 In addition to the get_stations spatial queries, the get_results method has a built-in nearest neighbour query if you omit the station_id and pass either geometry dict or a combination of latitude and longitude. This is especially useful for gridded results when each station represents a large area rather than a single point.
 
@@ -145,7 +145,7 @@ In addition to the get_stations spatial queries, the get_results method has a bu
   station_id = '4db28a9db0cb036507490887'
   geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
 
-  results = ts.get_results(dataset_id, geometry=geometry, squeeze_dims=True, output='Dataset')
+  results = ts.get_results(dataset_id, geometry=geometry, squeeze_dims=True)
   results
 
 If you want to get more than one station per dataset, then you can still use the get_results. The output will concatenate the xarray Datasets together and return a single xarray Dataset.
@@ -154,14 +154,13 @@ If you want to get more than one station per dataset, then you can still use the
 
   station_ids = [station_id, '474f75b4de127caca088620a']
 
-  results = ts.get_results(dataset_id, station_ids, squeeze_dims=True, output='Dataset')
+  results = ts.get_results(dataset_id, station_ids)
   results
 
 
 Selective filters
 ~~~~~~~~~~~~~~~~~
-In Tethys version 4, the results have been saved into multiple chunks. These chunks contain specific time periods, heights, and stations. It is best to provide from_date, to_date, and heights filters to the get_results method so that less data needs to be downloaded and concatenated.
-
+In Tethys version 4, the results have been saved into multiple chunks. These chunks contain specific time periods, heights, and stations. It is best to provide from_date, to_date, and heights filters to the get_results method so that less data needs to be downloaded and concatenated. If you don't, you might end up using a lot of RAM.
 
 Dataset versions
 ----------------
