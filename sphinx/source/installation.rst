@@ -6,7 +6,7 @@ Install via pip::
 
 Or conda::
 
-  conda install -c mullenkamp tethysts
+  conda install -c mullenkamp tethysts tethys-data-models
 
 Requirements
 ------------
