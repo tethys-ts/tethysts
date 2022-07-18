@@ -7,6 +7,7 @@ This documentation and the tethysts package are currently under active developme
 The package dependencies are: zstandard, pandas, xarray, scipy, boto3, orjson, requests, and shapely.
 
 The GitHub repository is found `here <https://github.com/tethys-ts/tethysts>`_.
+Go to the `Tethys Dataset Discovery <https://wai.tethys-ts.xyz/>`_ dashboard to easily see what datasets are available.
 
 .. toctree::
    :maxdepth: 2
