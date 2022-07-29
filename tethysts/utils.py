@@ -699,9 +699,12 @@ def xr_concat(datasets: List[xr.Dataset]):
                 var_dict = {'dims': dims, 'enc': enc, 'dtype': dtype, 'attrs': chunk[var].attrs}
                 chunk_dict[var] = var_dict
 
-    xr3 = xr.combine_by_coords(coords_list)
+    try:
+        xr3 = xr.combine_by_coords(coords_list, compat='override', data_vars='minimal', coords='all', combine_attrs='override')
+    except:
+        xr3 = xr.merge(coords_list, compat='override', combine_attrs='override')
 
-    # Run checks
+    # Run checks - requires psutil which I don't want to make it a dep yet...
     # available_memory = getattr(psutil.virtual_memory(), 'available')
     # dims_dict = dict(xr3.coords.dims)
     # size = 0
