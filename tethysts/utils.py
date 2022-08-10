@@ -729,9 +729,9 @@ def xr_concat(datasets: List[xr.Dataset]):
     for chunk in datasets:
         for var in chunk.data_vars:
             if isinstance(chunk[var].variable._data, np.ndarray):
-                xr3[var].loc[chunk[var].coords.indexes] = chunk[var].values
+                xr3[var].loc[chunk[var].transpose(*chunk_dict[var]['dims']).coords.indexes] = chunk[var].transpose(*chunk_dict[var]['dims']).values
             elif isinstance(chunk[var].variable._data, xr.core.indexing.MemoryCachedArray):
-                c1 = chunk[var].copy().load()
+                c1 = chunk[var].copy().load().transpose(*chunk_dict[var]['dims'])
                 xr3[var].loc[c1.coords.indexes] = c1.values
                 c1.close()
                 del c1
