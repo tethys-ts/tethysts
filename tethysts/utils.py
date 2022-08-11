@@ -699,9 +699,12 @@ def xr_concat(datasets: List[xr.Dataset]):
                 var_dict = {'dims': dims, 'enc': enc, 'dtype': dtype, 'attrs': chunk[var].attrs}
                 chunk_dict[var] = var_dict
 
-    xr3 = xr.combine_by_coords(coords_list)
+    try:
+        xr3 = xr.combine_by_coords(coords_list, compat='override', data_vars='minimal', coords='all', combine_attrs='override')
+    except:
+        xr3 = xr.merge(coords_list, compat='override', combine_attrs='override')
 
-    # Run checks
+    # Run checks - requires psutil which I don't want to make it a dep yet...
     # available_memory = getattr(psutil.virtual_memory(), 'available')
     # dims_dict = dict(xr3.coords.dims)
     # size = 0
@@ -726,9 +729,9 @@ def xr_concat(datasets: List[xr.Dataset]):
     for chunk in datasets:
         for var in chunk.data_vars:
             if isinstance(chunk[var].variable._data, np.ndarray):
-                xr3[var].loc[chunk[var].coords.indexes] = chunk[var].values
+                xr3[var].loc[chunk[var].transpose(*chunk_dict[var]['dims']).coords.indexes] = chunk[var].transpose(*chunk_dict[var]['dims']).values
             elif isinstance(chunk[var].variable._data, xr.core.indexing.MemoryCachedArray):
-                c1 = chunk[var].copy().load()
+                c1 = chunk[var].copy().load().transpose(*chunk_dict[var]['dims'])
                 xr3[var].loc[c1.coords.indexes] = c1.values
                 c1.close()
                 del c1
