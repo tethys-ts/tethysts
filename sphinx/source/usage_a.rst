@@ -75,7 +75,7 @@ In this example there is one remote we want to check for datasets, but more dict
 
 Caching
 ~~~~~~~~~~~~~~~~
-New version 4, the Tethys class can now be initialized with a local cache path. Tethys can now download the results chunks locally to be used again in future get_results calls.
+New in version 4, the Tethys class can now be initialized with a local cache path. Tethys can now download the results chunks locally to be used again in future get_results calls.
 
 Just pass a cache path when Tethys is initialized:
 
@@ -142,7 +142,6 @@ In addition to the get_stations spatial queries, the get_results method has a bu
 
 .. ipython:: python
 
-  station_id = '4db28a9db0cb036507490887'
   geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
 
   results = ts.get_results(dataset_id, geometry=geometry, squeeze_dims=True)
@@ -152,7 +151,7 @@ If you want to get more than one station per dataset, then you can still use the
 
 .. ipython:: python
 
-  station_ids = [station_id, '474f75b4de127caca088620a']
+  station_ids = [station_id, '96e9ff9437fc738b24d10b42']
 
   results = ts.get_results(dataset_id, station_ids)
   results
@@ -160,7 +159,7 @@ If you want to get more than one station per dataset, then you can still use the
 
 Selective filters
 ~~~~~~~~~~~~~~~~~
-In Tethys version 4, the results have been saved into multiple chunks. These chunks contain specific time periods, heights, and stations. It is best to provide from_date, to_date, and heights filters to the get_results method so that less data needs to be downloaded and concatenated. If you don't, you might end up using a lot of RAM.
+In Tethys version 4, the results have been saved into multiple chunks. These chunks contain specific time periods, heights, and stations. It is best to provide from_date, to_date, and heights filters to the get_results method so that less data needs to be downloaded and concatenated. If you don't, you might end up using a lot of RAM and processing time unnecessarily.
 
 Dataset versions
 ----------------

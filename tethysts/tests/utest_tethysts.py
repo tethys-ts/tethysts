@@ -228,17 +228,20 @@ remote = {'bucket': 'nz-water-use', 'public_url': 'https://b2.tethys-ts.xyz/file
 remote = {'bucket': 'niwa-sos', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'orc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'met-service', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
+remote = {'bucket': 'met-solutions', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'tasman-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
+cache = '/home/mike/cache/tethys'
 
-dataset_id = '752ee66d969cc09a16efebc7'
-station_ids = '80ede07567c4d7cdd00b0954'
+dataset_id = '4ae05d099af292fec48792ec'
+station_ids = '462fe69802f7df152eef7651'
 
 dataset_id = 'fde8d7496cb5cda74b8bbe8d'
 
-dataset_id = '870e79441964b26f0908f732'
-station_ids = '8da1e6b2869430ab5aadc0e5'
+dataset_id = 'b5d84aa773de2a747079c127'
+station_ids = 'f9c61373e7ca386c1fab06db'
+station_ids = ['f9c61373e7ca386c1fab06db', '96e9ff9437fc738b24d10b42']
 
 dataset_id = 'dddb02cd5cb7ae191311ab19'
 station_ids = '71369f685f7a5841a060a171'
@@ -280,6 +283,8 @@ dataset_id = 'ef738a24e614c7848565ec81'
 dataset_id = '752ee66d969cc09a16efebc7'
 dataset_id = 'a746aca4bd66981f148e680f'
 
+dataset_id = '10c4bea7d538387033956cf8'
+
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
 self = Tethys()
@@ -288,12 +293,12 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:1]]
+station_ids = [s['station_id'] for s in stns1[:3]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
 
-results1 = self.get_results(dataset_id, station_ids, heights=None, version_date=version_date)
+results1 = self.get_results(dataset_id, station_ids, heights=[10, 20, 30, 80], version_date=version_date)
 
 results1 = self.get_results(dataset_id, station_ids, heights=[10, 20, 30, 80])
 
@@ -389,6 +394,7 @@ ds1 = [d for d in self.datasets if (d['feature'] == 'atmosphere')]
 
 ds1 = [d for d in self.datasets if (d['owner'] == 'MetService')]
 
+ds1 = [d for d in self.datasets if (d['feature'] == 'waterway')]
 
 ############################3
 ### checks
