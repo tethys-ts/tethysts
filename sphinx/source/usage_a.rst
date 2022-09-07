@@ -21,6 +21,8 @@ Import the Tethys class:
 
    from tethysts import Tethys
    from pprint import pprint as print
+   import warnings
+   warnings.filterwarnings("ignore")
 
    remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}]
    dataset_id = 'b5d84aa773de2a747079c127'
@@ -98,6 +100,7 @@ Once you've decided which dataset you want (i.e. cumulative 24 hour precipitatio
   my_station = [s for s in stations if (s['name'] == "Waimakariri at Arthur's Pass")][0]
   my_station
 
+
 Again, the stations object is a list of dictionaries. Most of the data in each dictionary should be self-explanatory.
 
 If you've got geographic coordinates as a GeoJSON point or a combination of a latitude and longitude, then this can be passed to the get_stations method to get the nearest single station.
@@ -110,6 +113,7 @@ If you've got geographic coordinates as a GeoJSON point or a combination of a la
   my_station = ts.get_stations(dataset_id, geometry=geometry)
   my_station[0]
 
+
 To get a bunch of stations within a specified area, you can pass a polygon GeoJSON geometry or a combination of latitude, longitude, and distance (radius in decimal degrees).
 
 .. ipython:: python
@@ -121,6 +125,7 @@ To get a bunch of stations within a specified area, you can pass a polygon GeoJS
 
   my_stations = ts.get_stations(dataset_id, lat=lat, lon=lon, distance=distance)
   my_stations
+
 
 Results
 -------
