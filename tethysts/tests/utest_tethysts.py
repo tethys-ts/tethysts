@@ -278,7 +278,7 @@ dataset_id = 'c3a09c8a5da175897916e8e8'
 dataset_id = '6779bb1adf5ba7174f18aadf'
 dataset_id = '870e79441964b26f0908f732'
 
-dataset_id = 'fc06fb5459b720cc99645323'
+dataset_id = 'df72cd77c0bb8accfd2d09f7'
 
 dataset_id = 'ef738a24e614c7848565ec81'
 
@@ -298,7 +298,7 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:200]]
+station_ids = [s['station_id'] for s in stns1[:1]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
