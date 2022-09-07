@@ -107,6 +107,7 @@ Again, the stations object is a list of dictionaries. Most of the data in each d
 If you've got geographic coordinates as a GeoJSON point or a combination of a latitude and longitude, then this can be passed to the get_stations method to get the nearest single station.
 
 .. ipython:: python
+  :okwarning:
 
   dataset_id = 'b5d84aa773de2a747079c127'
   geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
@@ -118,6 +119,7 @@ If you've got geographic coordinates as a GeoJSON point or a combination of a la
 To get a bunch of stations within a specified area, you can pass a polygon GeoJSON geometry or a combination of latitude, longitude, and distance (radius in decimal degrees).
 
 .. ipython:: python
+  :okwarning:
 
   dataset_id = 'b5d84aa773de2a747079c127'
   lon = 172.0
@@ -147,6 +149,7 @@ Unlike the previously returned objects, the results object (in this case) is an 
 In addition to the get_stations spatial queries, the get_results method has a built-in nearest neighbour query if you omit the station_id and pass either geometry dict or a combination of latitude and longitude. This is especially useful for gridded results when each station represents a large area rather than a single point.
 
 .. ipython:: python
+  :okwarning:
 
   geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
 
