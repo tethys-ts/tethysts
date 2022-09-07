@@ -18,6 +18,7 @@ Import the Tethys class:
 
 .. ipython:: python
    :suppress:
+   :okwarning:
 
    from tethysts import Tethys
    from pprint import pprint as print
