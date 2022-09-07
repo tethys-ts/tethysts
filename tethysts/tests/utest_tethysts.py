@@ -74,7 +74,7 @@ dataset_id = 'fb77f37b16edae3534e73ddd'
 station_id = 'fd60b5bafe19d6b243dda43d'
 
 dataset_id = 'e37f1451fcf8f9e64b66be8d'
-
+7300
 dataset_id = '9c7e107f99180e45eafdf5af'
 station_id = 'c6df8b47b2efce3daedef48e'
 station_id = 'a3f2d35fd6df8247cea32d03'
@@ -93,7 +93,7 @@ dataset_id = '2c004d8366bcc22927d68994'
 station_id = '673d6d9fca3ccf38fa009ad1'
 
 dataset_id = 'f27574a7b38eab5b0bc2b3d7' # envlib
-station_id = 'fedeb59e6c7f47597a7d47c7'
+station_id = 'fedeb59e6c7f47597tasman-enva7d47c7'
 
 dataset_id = 'de3bff8e3c3a2ad9200d8684'
 station_id = 'fedeb59e6c7f47597a7d47c7'
@@ -230,6 +230,8 @@ remote = {'bucket': 'orc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'v
 remote = {'bucket': 'met-service', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 remote = {'bucket': 'met-solutions', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'tasman-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'gwrc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'noaa-nwm', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 cache = '/home/mike/cache/tethys'
@@ -252,7 +254,7 @@ ref = 'ashley'
 
 station_ids = 'c15ce95a56b39b6dfeea00e8'
 
-dataset_id = '9bf36a9e6b6a2a111bf6634b'
+dataset_id = '0de7cbfe05aebc2272ceba17'
 
 dataset_id = 'f56892eb59d12cfbc02acceb'
 version_date='2022-04-29T12:05:04'
@@ -276,7 +278,7 @@ dataset_id = 'c3a09c8a5da175897916e8e8'
 dataset_id = '6779bb1adf5ba7174f18aadf'
 dataset_id = '870e79441964b26f0908f732'
 
-dataset_id = '7588abfc49784d7425a9ab36'
+dataset_id = 'fc06fb5459b720cc99645323'
 
 dataset_id = 'ef738a24e614c7848565ec81'
 
@@ -284,6 +286,9 @@ dataset_id = '752ee66d969cc09a16efebc7'
 dataset_id = 'a746aca4bd66981f148e680f'
 
 dataset_id = '10c4bea7d538387033956cf8'
+
+dataset_id = 'd3e5979d76fcebc9f6aec383'
+version_date = '2022-09-04T19:00:00'
 
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
@@ -293,7 +298,7 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:3]]
+station_ids = [s['station_id'] for s in stns1[:200]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
