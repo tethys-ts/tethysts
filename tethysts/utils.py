@@ -624,8 +624,9 @@ def load_dataset(results, from_date=None, to_date=None):
     chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
     data = data.drop_vars(chunk_vars)
 
-    stn_vars = [v for v in list(data.data_vars) if ('time' not in data[v].dims) and (v not in ['station_id', 'lon', 'lat'])]
-    data = data.drop_vars(stn_vars)
+    # if 'geometry' in data.dims:
+    #     stn_vars = [v for v in list(data.data_vars) if ('time' not in data[v].dims) and (v not in ['station_id', 'lon', 'lat'])]
+    #     data = data.drop_vars(stn_vars)
 
     if 'station_geometry' in data.dims:
         stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
