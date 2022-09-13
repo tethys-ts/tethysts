@@ -20,7 +20,6 @@ from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
 from scipy import spatial
-import traceback
 import tethys_data_models as tdm
 import pathlib
 from functools import partial
@@ -427,10 +426,8 @@ def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, t
     """
 
     """
-    rc2 = copy.deepcopy(results_chunks)
-
     ## Stations filter
-    rc2 = [rc for rc in rc2 if rc['station_id'] in stn_ids]
+    rc2 = copy.deepcopy([rc for rc in results_chunks if rc['station_id'] in stn_ids])
 
     ## Temporal filter
     if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc2[0]):
@@ -468,6 +465,12 @@ def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, t
         else:
             raise TypeError('bands must be an int or list of int.')
         rc2 = [rc for rc in rc2 if rc['band'] in b1]
+
+    if len(rc2) == 0:
+        return rc2
+
+    ## Sort by mod date
+    rc2.sort(key=lambda d: d['modified_date'] if 'modified_date' in d else '1900-01-01')
 
     return rc2
 
