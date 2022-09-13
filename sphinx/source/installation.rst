@@ -2,11 +2,11 @@ Installation
 ============
 Install via pip::
 
-  pip install tethysts
+  pip install tethysts==0.4
 
 Or conda::
 
-  conda install -c mullenkamp tethysts tethys-data-models
+  conda install -c mullenkamp tethysts=0.4
 
 Requirements
 ------------
