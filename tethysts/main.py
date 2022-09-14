@@ -201,7 +201,9 @@ class Tethys(object):
                      lat: float = None,
                      lon: float = None,
                      distance: float = None,
-                     version_date: Union[str, datetime, pd.Timestamp] = None
+                     version_date: Union[str, datetime, pd.Timestamp] = None,
+                     from_date: Union[str, pd.Timestamp, datetime] = None,
+                     to_date: Union[str, pd.Timestamp, datetime] = None
                      ):
         """
         Method to return the stations associated with a dataset.
@@ -220,6 +222,10 @@ class Tethys(object):
             See lat description. This should be in decimal degrees not meters.
         version_date: str in iso 8601 datetime format or None
             The specific version of the stations data. None will return the latest version.
+        from_date : str, Timestamp, datetime, or None
+            The start date of the selection.
+        to_date : str, Timestamp, datetime, or None
+            The end date of the selection.
 
         Returns
         -------
@@ -244,12 +250,20 @@ class Tethys(object):
                 remote['obj_key'] = stn_key
                 stn_obj = get_object_s3(**remote)
                 stn_list = read_json_zstd(stn_obj)
-
                 stn_dict = {s['station_id']: s for s in stn_list if isinstance(s, dict)}
                 update_nested(self._stations, dataset_id, vd, stn_dict)
             except:
                 print('No stations.json.zst file in S3 bucket')
                 return None
+
+        ## Temporal queries
+        if isinstance(from_date, (str, pd.Timestamp, datetime)):
+            from_date1 = pd.Timestamp(from_date)
+            stn_dict = {s_id: s for s_id, s in stn_dict.items() if pd.Timestamp(s['time_range']['from_date']) >= from_date1}
+
+        if isinstance(to_date, (str, pd.Timestamp, datetime)):
+            to_date1 = pd.Timestamp(to_date)
+            stn_dict = {s_id: s for s_id, s in stn_dict.items() if pd.Timestamp(s['time_range']['to_date']) <= to_date1}
 
         ## Spatial query
         stn_ids = spatial_query(stn_dict, geometry, lat, lon, distance)
