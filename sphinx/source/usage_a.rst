@@ -172,14 +172,41 @@ In Tethys version 4, the results have been saved into multiple chunks. These chu
 
 Dataset versions
 ----------------
-If a version_date is not passed to the get_results method, then the latest dataset version will be returned. If you'd like to list all the dataset versions and to choose which version you'd like to pass to the get_results method, then you can use the get_versions method.
+If a version_date is not passed to the get_results or get_stations method, then the latest dataset version will be returned. If you'd like to list all the dataset versions and to choose which version you'd like to pass to the get_results or get_stations method, then you can use the get_versions method.
 
 .. ipython:: python
 
   versions = ts.get_versions(dataset_id)
   versions
 
+Handling geometries
+---------------------
+Depending data request, Tethys will either return geometries as GeoJSON or Well-Known Binary (WKB) hexadecimal geometries. If you're not familiar with how to handle these formats, I recommend using `Shapely <https://shapely.readthedocs.io/en/stable/manual.html>`_ to convert into and out of geometry formats and to provide a range of geospatial processing tools. Shapely is used as the geoprocessing tool behind `geopandas <https://geopandas.org/en/stable/>`_.
 
-Tethys web API
---------------
-The `Tethys web API <https://api.tethys-ts.xyz/docs>`_ uses all of the same function names and associated input parameters as the Python package. But in most cases, users should use the Python package instead of the web API as it will be faster, more flexible, and won't put load on the VM running the web API.
+For example if you've made a get_stations request and returned GeoJSON geometries, then you could convert them to shapely objects and put them into a dictionary with station_ids as keys:
+
+.. ipython:: python
+  from shapely.geometry import shape
+
+  dataset_id = 'b5d84aa773de2a747079c127'
+
+  stations = ts.get_stations(dataset_id)
+  stns_geo = {s['station_id']: shape(s['geometry']) for s in stations}
+  stns_geo['f9c61373e7ca386c1fab06db']
+
+
+Or you could convert the WKB hex of results into a list of shapely objects:
+
+.. ipython:: python
+  from shapely import wkb
+
+  station_ids = [station_id, '96e9ff9437fc738b24d10b42']
+
+  results = ts.get_results(dataset_id, station_ids)
+  geo_list = [wkb.loads(g, hex=True) for g in results.geometry.values]
+  geo_list
+
+
+.. Tethys web API
+.. --------------
+.. The `Tethys web API <https://api.tethys-ts.xyz/docs>`_ uses all of the same function names and associated input parameters as the Python package. But in most cases, users should use the Python package instead of the web API as it will be faster, more flexible, and won't put load on the VM running the web API.
