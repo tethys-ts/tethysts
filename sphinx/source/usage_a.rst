@@ -186,6 +186,7 @@ Depending data request, Tethys will either return geometries as GeoJSON or Well-
 For example if you've made a get_stations request and returned GeoJSON geometries, then you could convert them to shapely objects and put them into a dictionary with station_ids as keys:
 
 .. ipython:: python
+
   from shapely.geometry import shape
 
   dataset_id = 'b5d84aa773de2a747079c127'
@@ -194,10 +195,11 @@ For example if you've made a get_stations request and returned GeoJSON geometrie
   stns_geo = {s['station_id']: shape(s['geometry']) for s in stations}
   stns_geo['f9c61373e7ca386c1fab06db']
 
-
 Or you could convert the WKB hex of results into a list of shapely objects:
 
+
 .. ipython:: python
+
   from shapely import wkb
 
   station_ids = [station_id, '96e9ff9437fc738b24d10b42']
