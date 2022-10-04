@@ -213,13 +213,11 @@ version_date = None
 heights = None
 bands: int = None
 squeeze_dims: bool = False
-output: str = 'xarray'
 threads: int = 30
 
 remote = {'bucket': 'typhon', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
-# remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 2}
 remote = {'bucket': 'nasa-data', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
 remote = {'bucket': 'point-forecasts', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
@@ -233,13 +231,21 @@ remote = {'bucket': 'tasman-env', 'public_url': 'https://b2.tethys-ts.xyz/file',
 remote = {'bucket': 'gwrc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'noaa-nwm', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
-cache = '/media/nvme1/cache/tethys'
+# cache = '/media/nvme1/cache/tethys'
 cache = '/home/mike/cache/tethys'
+
+dataset_id = '7751c5f1bf47867fb109d7eb'
+dataset_id = '0b2bd62cc42f3096136f11e9'
+# dataset_id = '0de7cbfe05aebc2272ceba17'
+dataset_id = 'f16774ea29f024a306c7fc7a'
+dataset_id = '9568f663d566aabb62a8e98e'
+
+
 
 dataset_id = '4ae05d099af292fec48792ec'
 station_ids = '462fe69802f7df152eef7651'
 
-dataset_id = 'fde8d7496cb5cda74b8bbe8d'
+dataset_id = '7751c5f1bf47867fb109d7eb'
 
 dataset_id = 'b5d84aa773de2a747079c127'
 station_ids = 'f9c61373e7ca386c1fab06db'
@@ -252,35 +258,14 @@ dataset_id = '0b2bd62cc42f3096136f11e9'
 station_ids = 'c8db6013a9eb76705b5c80f2'
 ref = 'ashley'
 
-station_ids = 'c15ce95a56b39b6dfeea00e8'
+station_ids = 'e8ef98448a4cd1df6d6c6af3'
 
-dataset_id = '0de7cbfe05aebc2272ceba17'
+dataset_id = '9568f663d566aabb62a8e98e'
 
 dataset_id = 'f56892eb59d12cfbc02acceb'
 version_date='2022-04-29T12:05:04'
 
-dataset_id = 'c3a09c8a5da175897916e8e8'
-
-dataset_id = '22a389416b05243e3957a113'
-
-dataset_id = '8d4afa6c8e82d91b81879c12'
-
-dataset_id = '320d6836250169a5f7b78163'
-
-dataset_id = 'bb20b3ef3dd4341ee30a2bf0'
-
-dataset_id = 'e49afb6e95028206cf14cf61'
-
-dataset_id = '7cc8b402e168885ef69870ed'
-
-dataset_id = 'c3a09c8a5da175897916e8e8'
-
-dataset_id = '6779bb1adf5ba7174f18aadf'
-dataset_id = '870e79441964b26f0908f732'
-
-dataset_id = 'df72cd77c0bb8accfd2d09f7'
-
-dataset_id = 'ef738a24e614c7848565ec81'
+dataset_id = 'c3d8d28896ec5f44d8e46f43'
 
 dataset_id = '752ee66d969cc09a16efebc7'
 dataset_id = 'a746aca4bd66981f148e680f'
@@ -290,6 +275,8 @@ dataset_id = '10c4bea7d538387033956cf8'
 dataset_id = 'd3e5979d76fcebc9f6aec383'
 version_date = '2022-09-04T19:00:00'
 
+dataset_id = '469b6a9ef620bce70fab5760'
+
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
 self = Tethys()
@@ -298,16 +285,18 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:1]]
+station_ids = [s['station_id'] for s in stns1[:2]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
+results1 = self.get_results(dataset_id, station_ids, heights=None, output_path='/home/mike/cache/tethys/test.h5', compression='zstd')
 
 results1 = self.get_results(dataset_id, station_ids, heights=[10, 20, 30, 80], version_date=version_date)
 
-results1 = self.get_results(dataset_id, station_ids, heights=[10, 20, 30, 80])
+results1 = self.get_results(dataset_id, station_ids, heights=[10])
+results1 = self.get_results(dataset_id, station_ids, heights=[10], output_path='/home/mike/cache/tethys/test.h5', compression='zstd')
 
-results1 = self.get_results(dataset_id, station_ids, heights=[0], from_date='2020-04-01')
+results1 = self.get_results(dataset_id, station_ids, heights=[10], from_date='2020-04-01')
 
 results1 = self.get_results(dataset_id, station_ids, heights=None, from_date='2015-04-01')
 
@@ -400,6 +389,98 @@ ds1 = [d for d in self.datasets if (d['feature'] == 'atmosphere')]
 ds1 = [d for d in self.datasets if (d['owner'] == 'MetService')]
 
 ds1 = [d for d in self.datasets if (d['feature'] == 'waterway')]
+
+
+
+import os
+from tethysts import Tethys
+from pprint import pprint
+import numpy as np
+from shapely.geometry import box, mapping
+
+###########################################
+### Parameters
+
+dataset_id = '469b6a9ef620bce70fab5760'
+cache = '/home/mike/cache/tethys'
+output_path = '/home/mike/cache/temp'
+
+heights = [10, 20] # Select the heights you want to extract
+block_length = 2   # Set this to at least 2. You can set it to 3 if you've got enough RAM
+
+
+##########################################
+### Get the data
+
+# Cache the results chunks so that it's easy to query the results later
+ts = Tethys(cache=cache)
+
+ds1 = [d for d in self.datasets if (d['dataset_id'] == dataset_id)][0]
+
+pprint(ds1) # Take a look at the dataset metadata
+
+# Get the total extent of the dataset and break it up by the block_length
+extent = np.array(ds1['extent']['coordinates'][0])
+extent_transposed = extent.T
+
+min_lon = extent_transposed[0].min()
+max_lon = extent_transposed[0].max()
+min_lat = extent_transposed[1].min()
+max_lat = extent_transposed[1].max()
+
+x_range = np.arange(min_lon, max_lon + block_length, block_length)
+y_range = np.arange(min_lat, max_lat + block_length, block_length)
+
+# Iterate through all combos of lons and lats
+for iy, y in enumerate(y_range[1:]):
+    min_y = y_range[iy]
+    for ix, x in enumerate(x_range[1:]):
+        min_x = x_range[ix]
+
+        new_extent = box(min_x, min_y, x, y)
+        geo = mapping(new_extent)
+
+        stns = ts.get_stations(dataset_id, geo)
+        stn_ids = [s['station_id'] for s in stns]
+
+        # If stations are found, then get the associated results
+        if stn_ids:
+            results = ts.get_results(dataset_id, stn_ids, heights=heights)
+    
+            output_file = '{ds}_{min_x}_{min_y}_{max_x}_{max_y}.nc'.format(ds=dataset_id, min_x=min_x, min_y=min_y, max_x=x, max_y=y)
+    
+            # Save the file to netcdf (xarray uses an excessive amount of memory when saving to netcdf, so be careful...)
+            results.to_netcdf(os.path.join(output_path, output_file))
+            results.close()
+            del results
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ############################3
 ### checks
