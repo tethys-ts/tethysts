@@ -2,7 +2,7 @@ Installation
 ============
 Install via pip::
 
-  pip install tethysts==0.4
+  pip install tethysts==4.5
 
 Or conda::
 
