@@ -8,3 +8,4 @@ requests
 zstandard
 shapely
 tethys-data-models
+hdf5tools
