@@ -3,6 +3,7 @@ Created on 2021-04-27.
 
 @author: Mike K
 """
+import os
 from tethysts import Tethys
 import pandas as pd
 import os
@@ -58,7 +59,7 @@ remotes = [
      },
      ]
 
-outputs = ['xarray', 'dict', 'json']
+# outputs = ['xarray', 'dict', 'json']
 
 geometry1 = {'type': 'Point', 'coordinates': [172, -42.8]}
 # geometry2 = shape(geometry1).buffer(0.5)
@@ -98,16 +99,16 @@ def test_tethys(remote):
 t1 = Tethys([remote3])
 
 
-@pytest.mark.parametrize('output', outputs)
-def test_get_results(output):
-    data1 = t1.get_results(dataset_id, station_ids, squeeze_dims=True, output=output)
+# @pytest.mark.parametrize('output', outputs)
+# def test_get_results(output):
+#     data1 = t1.get_results(dataset_id, station_ids, squeeze_dims=True, output=output)
 
-    if output == 'xarray':
-        assert len(data1.time) > 90
-    elif output == 'dict':
-        assert len(data1['coords']['time']['data']) > 90
-    elif output == 'json':
-        assert len(data1) > 90
+#     if output == 'xarray':
+#         assert len(data1.time) > 90
+#     elif output == 'dict':
+#         assert len(data1['coords']['time']['data']) > 90
+#     elif output == 'json':
+#         assert len(data1) > 90
 
 
 def test_get_nearest_station1():
@@ -138,6 +139,17 @@ def test_get_nearest_results2():
     s2 = t1.get_results(dataset_id, lat=lat, lon=lon)
 
     assert len(s2) > 0
+
+
+def test_save_h5():
+    s2 = t1.get_results(dataset_id, station_ids, output_path='test1.h5')
+
+    assert len(s2) == 1
+
+    os.remove('test1.h5')
+
+
+
 
 
 # def test_get_intersection_results1():

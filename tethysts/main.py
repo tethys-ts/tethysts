@@ -14,7 +14,7 @@ from datetime import datetime
 import copy
 # from multiprocessing.pool import ThreadPool
 import concurrent.futures
-from tethysts.utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, xr_concat
+from tethysts.utils import get_object_s3, result_filters, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, results_concat
 # from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, xr_concat
 from typing import List, Union
 import tethys_data_models as tdm
@@ -432,7 +432,8 @@ class Tethys(object):
                     heights: Union[List[Union[int, float]], Union[int, float]] = None,
                     bands: Union[List[int], int] = None,
                     squeeze_dims: bool = False,
-                    output: str = 'xarray',
+                    output_path: Union[str, pathlib.Path] = None,
+                    compression: str = 'gzip',
                     threads: int = 30,
                     # include_chunk_vars: bool = False
                     ):
@@ -467,15 +468,16 @@ class Tethys(object):
             The bands to return. If None, then all bands are returned.
         squeeze_dims : bool
             Should all dimensions with a length of one be removed from the parameter's dimensions?
-        output : str
-            Output format of the results. Options are:
-                xarray - return the results as an xarray Dataset,
-                dict - return a dictionary of results as a dictionary,
-                json - return a json str of the dict.
+        output_path : str, pathlib.Path, or None
+            The optional path to save the results to an hdf5 file. A value of None will not save a file.
+        compression : str or None
+            This only applies when output_path is a path string. This is the type of compression used for the output hdf5 file. The options are gzip, lzf, zstd, or None. gzip is compatible with any hdf5 installation (not only h5py), so this should be used if interoperability across platforms is important. lzf is compatible with any h5py installation, so if only python users will need to access these files then this is a better option than gzip. zstd requires the hdf5plugin python package, but is the best compression option if only users of the tethysts package will be using it. None has no compression and is generally not recommended except in niche situations.
+        threads : int
+            The number of threads to simultaneously download results chunks. Realistically, this should not exceede 60.
 
         Returns
         -------
-        Whatever the output was set to.
+        xr.Dataset
         """
         ## Get parameters
         dataset = self._datasets[dataset_id]
@@ -519,47 +521,53 @@ class Tethys(object):
         rc_list = self._get_results_chunks(dataset_id, vd)
 
         chunks = chunk_filters(rc_list, stn_ids, time_interval, from_date, to_date, heights, bands)
-        # chunks, index, dims = nest_results(chunks)
 
-        ## Get results chunks
-        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-            remote['cache'] = self.cache
-            if not 'public_url' in remote:
-                s3 = s3_client(remote['connection_config'], threads)
-                remote['s3'] = s3
+        if chunks:
 
-            futures = []
-            for chunk in chunks:
-                remote['chunk'] = chunk
-                remote['from_date'] = from_date
-                remote['to_date'] = to_date
-                f = executor.submit(download_results, **remote)
-                futures.append(f)
-            runs = concurrent.futures.wait(futures)
+            ## Get results chunks
+            with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+                remote['cache'] = self.cache
+                if not 'public_url' in remote:
+                    s3 = s3_client(remote['connection_config'], threads)
+                    remote['s3'] = s3
+    
+                futures = []
+                for chunk in chunks:
+                    remote['chunk'] = chunk
+                    remote['from_date'] = from_date
+                    remote['to_date'] = to_date
+                    f = executor.submit(download_results, **remote)
+                    futures.append(f)
+                runs = concurrent.futures.wait(futures)
+    
+            results_list = [r.result() for r in runs[0]]
+    
+            ## Clear xarray cache...because it loves caching everything...
+            ## This is to ensure that xarray will open the file rather than opening a cache
+            xr.backends.file_manager.FILE_CACHE.clear()
+    
+            ## combine results
+            xr3 = results_concat(results_list, output_path=output_path, from_date=from_date, to_date=to_date, from_mod_date=from_mod_date, to_mod_date=to_mod_date, compression=compression)
+    
+            ## Convert to new version
+            attrs = xr3.attrs.copy()
+            if 'version' in attrs:
+                attrs['system_version'] = attrs.pop('version')
+    
+            ## Extra spatial query if data are stored in blocks
+            if ('grid' in result_type) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
+                xr3 = get_nearest_from_extent(xr3, geometry, lat, lon)
+    
+            ## Filters
+            xr3.attrs['version_date'] = pd.Timestamp(vd).tz_localize(None).isoformat()
+    
+            if squeeze_dims:
+                xr3 = xr3.squeeze_dims()
 
-        chunks1 = [r.result() for r in runs[0]]
+        else:
+            xr3 = xr.Dataset()
 
-        ## combine results
-        xr3 = xr_concat(chunks1)
-
-        ## Convert to new version
-        attrs = xr3.attrs.copy()
-        if 'version' in attrs:
-            attrs['system_version'] = attrs.pop('version')
-
-        ## Extra spatial query if data are stored in blocks
-        if ('grid' in result_type) and ((geom_type == 'Point') or (isinstance(lat, float) and isinstance(lon, float))):
-            xr3 = get_nearest_from_extent(xr3, geometry, lat, lon)
-
-        ## Filters
-        ts_xr1 = result_filters(xr3, from_mod_date=from_mod_date, to_mod_date=to_mod_date)
-
-        ts_xr1.attrs['version_date'] = pd.Timestamp(vd).tz_localize(None).isoformat()
-
-        ## Output
-        ts_xr1 = process_results_output(ts_xr1, output=output, squeeze_dims=squeeze_dims)
-
-        return ts_xr1
+        return xr3
 
 
 

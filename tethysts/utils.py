@@ -26,6 +26,7 @@ from functools import partial
 from pydantic import HttpUrl
 import shutil
 import gzip
+import hdf5tools
 # import psutil
 
 pd.options.display.max_columns = 10
@@ -475,10 +476,46 @@ def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, t
     return rc2
 
 
-def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None):
+# def remove_char_dim_names(data):
+#     """
+
+#     """
+#     for v in data.variables:
+#         if 'char_dim_name' in data[v].encoding:
+#             _ = data[v].encoding.pop('char_dim_name')
+
+#     return data
+
+
+def remove_results_junk(data):
     """
 
     """
+    chunk_vars = [v for v in list(data.variables) if 'chunk' in v]
+    if chunk_vars:
+        data = data.drop_vars(chunk_vars)
+
+    # crap_vars = [v for v in list(data.variables) if 'string' in v]
+    # if crap_vars:
+    #     data = data.drop_vars(crap_vars)
+    
+    # if 'geometry' in data.dims:
+    #     stn_vars = [v for v in list(data.data_vars) if ('time' not in data[v].dims) and (v not in ['station_id', 'lon', 'lat'])]
+    #     data = data.drop_vars(stn_vars)
+    
+    if 'station_geometry' in data.dims:
+        stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
+        data = data.drop_vars(stn_vars)
+
+    return data
+
+
+def result_filters(data, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None):
+    """
+
+    """
+    data = remove_results_junk(data)
+
     if isinstance(from_date, (str, pd.Timestamp, datetime)):
         from_date1 = pd.Timestamp(from_date)
     else:
@@ -498,39 +535,37 @@ def result_filters(ts_xr, from_date=None, to_date=None, from_mod_date=None, to_m
         to_mod_date1 = None
 
     if (to_date1 is not None) or (from_date1 is not None):
-        ts_xr1 = ts_xr.sel(time=slice(from_date1, to_date1))
-    else:
-        ts_xr1 = ts_xr
+        data = data.sel(time=slice(from_date1, to_date1))
 
     if (to_mod_date1 is not None) or (from_mod_date1 is not None):
-        if 'modified_date' in ts_xr1:
-            ts_xr1 = ts_xr1.sel(modified_date=slice(from_mod_date1, to_mod_date1))
+        if 'modified_date' in data:
+            data = data.sel(modified_date=slice(from_mod_date1, to_mod_date1))
 
-    return ts_xr1
+    return data
 
 
-def process_results_output(ts_xr, output='xarray', squeeze_dims=False):
-    """
+# def process_results_output(ts_xr, output='xarray', squeeze_dims=False):
+#     """
 
-    """
-    ## Return
-    if squeeze_dims:
-        ts_xr = ts_xr.squeeze()
+#     """
+#     ## Return
+#     if squeeze_dims:
+#         ts_xr = ts_xr.squeeze()
 
-    if output == 'xarray':
-        return ts_xr
+#     if output == 'xarray':
+#         return ts_xr
 
-    elif output == 'dict':
-        data_dict = ts_xr.to_dict()
+#     elif output == 'dict':
+#         data_dict = ts_xr.to_dict()
 
-        return data_dict
+#         return data_dict
 
-    elif output == 'json':
-        json1 = orjson.dumps(ts_xr.to_dict(), option=orjson.OPT_OMIT_MICROSECONDS | orjson.OPT_SERIALIZE_NUMPY)
+#     elif output == 'json':
+#         json1 = orjson.dumps(ts_xr.to_dict(), option=orjson.OPT_OMIT_MICROSECONDS | orjson.OPT_SERIALIZE_NUMPY)
 
-        return json1
-    else:
-        raise ValueError("output must be one of 'xarray', 'dict', or 'json'")
+#         return json1
+#     else:
+#         raise ValueError("output must be one of 'xarray', 'dict', or 'json'")
 
 
 # def read_in_chunks(file_object, chunk_size=524288):
@@ -554,7 +589,7 @@ def local_file_byte_iterator(path, chunk_size=DEFAULT_BUFFER_SIZE):
             yield from chunk
 
 
-def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
+def url_stream_to_file(url, file_path, chunk_size=524288):
     """
 
     """
@@ -574,27 +609,11 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
             with requests.get(url, stream=True, timeout=300) as r:
                 r.raise_for_status()
                 stream = ResponseStream(r.iter_content(chunk_size))
-
-                if compression == 'zstd':
-                    if str(file_path2).endswith('.zst'):
-                        file_path2 = os.path.splitext(file_path2)[0]
-                    dctx = zstd.ZstdDecompressor()
-
-                    with open(file_path2, 'wb') as f:
-                        dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
-
-                elif compression == 'gzip':
-                    if str(file_path2).endswith('.gz'):
-                        file_path2 = os.path.splitext(file_path2)[0]
-
-                    with gzip.open(stream, 'rb') as s_file, open(file_path2, 'wb') as d_file:
-                        shutil.copyfileobj(s_file, d_file, chunk_size)
-                else:
-                    with open(file_path2, 'wb') as f:
+                with open(file_path2, 'wb') as f:
+                    chunk = stream.read(chunk_size)
+                    while chunk:
+                        f.write(chunk)
                         chunk = stream.read(chunk_size)
-                        while chunk:
-                            f.write(chunk)
-                            chunk = stream.read(chunk_size)
 
                 break
 
@@ -608,15 +627,13 @@ def url_stream_to_file(url, file_path, compression=None, chunk_size=524288):
     return file_path2
 
 
-def load_dataset(results, from_date=None, to_date=None):
+def process_dataset_obj(results, from_date=None, to_date=None):
     """
 
     """
-    if isinstance(results, (pathlib.Path, str)):
-        data = xr.open_dataset(results)
-    elif isinstance(results, bytes):
+    if isinstance(results, BytesIO):
         try:
-            data = xr.load_dataset(read_pkl_zstd(results))
+            data = xr.load_dataset(results, engine='h5netcdf')
         except:
             data = xr.load_dataset(results)
     elif isinstance(results, xr.Dataset):
@@ -624,31 +641,16 @@ def load_dataset(results, from_date=None, to_date=None):
     else:
         raise TypeError('Not the right data type.')
 
-    chunk_vars = [v for v in list(data.variables) if ('chunk' in v)]
-    data = data.drop_vars(chunk_vars)
+    data = result_filters(data, from_date, to_date)
 
-    # if 'geometry' in data.dims:
-    #     stn_vars = [v for v in list(data.data_vars) if ('time' not in data[v].dims) and (v not in ['station_id', 'lon', 'lat'])]
-    #     data = data.drop_vars(stn_vars)
+    data_obj = BytesIO()
+    hdf5tools.xr_to_hdf5(data, data_obj)
 
-    if 'station_geometry' in data.dims:
-        stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
-        data = data.drop_vars(stn_vars)
+    data.close()
+    del data
+    del results
 
-    if isinstance(from_date, (str, pd.Timestamp, datetime)):
-        from_date1 = pd.Timestamp(from_date)
-    else:
-        from_date1 = None
-
-    if isinstance(to_date, (str, pd.Timestamp, datetime)):
-        to_date1 = pd.Timestamp(to_date)
-    else:
-        to_date1 = None
-
-    if (to_date1 is not None) or (from_date1 is not None):
-        data = data.sel(time=slice(from_date1, to_date1))
-
-    return data
+    return data_obj
 
 
 def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None, from_date=None, to_date=None, return_raw=False):
@@ -663,9 +665,13 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
         chunk_path.parent.mkdir(parents=True, exist_ok=True)
 
         if not chunk_path.exists():
-            if public_url is not None:
+            if chunk['key'].endswith('.zst'):
+                data_obj = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
+                data = xr.load_dataset(read_pkl_zstd(data_obj))
+                hdf5tools.xr_to_hdf5(data, chunk_path)
+            elif public_url is not None:
                 url = create_public_s3_url(public_url, bucket, chunk['key'])
-                _ = url_stream_to_file(url, chunk_path, compression='zstd')
+                _ = url_stream_to_file(url, chunk_path)
             else:
                 data_obj = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
                 with open(chunk_path, 'wb') as f:
@@ -679,9 +685,13 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
         if return_raw:
             return data_obj
 
-    data = load_dataset(data_obj, from_date=from_date, to_date=to_date)
+        if chunk['key'].endswith('.zst'):
+            data_obj = read_pkl_zstd(data_obj)
+        data_obj = BytesIO(data_obj)
 
-    return data
+        data_obj = process_dataset_obj(data_obj, from_date=from_date, to_date=to_date)
+
+    return data_obj
 
 
 def xr_concat(datasets: List[xr.Dataset]):
@@ -741,6 +751,29 @@ def xr_concat(datasets: List[xr.Dataset]):
                 del c1
             else:
                 raise TypeError('Dataset data should be either an ndarray or a MemoryCachedArray.')
+
+    return xr3
+
+
+def results_concat(results_list, output_path=None, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, compression='gzip'):
+    """
+
+    """
+    if output_path is None:
+        temp_path = BytesIO()
+    else:
+        temp_path = output_path + '.temp'
+
+    hdf5tools.combine_hdf5(results_list, temp_path, compression='zstd')
+
+    xr3 = xr.open_dataset(temp_path, engine='h5netcdf', cache=False)
+    xr3 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date)
+
+    if isinstance(output_path, (str, pathlib.Path)):
+        hdf5tools.xr_to_hdf5(xr3, output_path, compression=compression)
+        xr3.close()
+        xr3 = xr.open_dataset(output_path, engine='h5netcdf', cache=False)
+        os.remove(temp_path)
 
     return xr3
 
