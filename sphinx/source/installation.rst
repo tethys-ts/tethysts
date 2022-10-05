@@ -6,8 +6,8 @@ Install via pip::
 
 Or conda::
 
-  conda install -c mullenkamp tethysts=0.4
+  conda install -c mullenkamp tethysts=4.5
 
 Requirements
 ------------
-The package dependencies are: tethys-data-models, zstandard, pandas, xarray, scipy, boto3, orjson, requests, and shapely.
+The package dependencies are: tethys-data-models, zstandard, pandas, xarray, scipy, boto3, orjson, requests, shapely, and hdf5tools.
