@@ -78,7 +78,7 @@ In this example there is one remote we want to check for datasets, but more dict
 
 Caching
 ~~~~~~~~~~~~~~~~
-New in version 4, the Tethys class can now be initialized with a local cache path. Tethys can now download the results chunks locally to be used again in future get_results calls.
+New in version 4, the Tethys class can now be initialized with a local cache path. Tethys can now download the results chunks locally to be used again in future get_results calls. This is generally recommended.
 
 Just pass a cache path when Tethys is initialized:
 
@@ -141,10 +141,10 @@ The get_results method has many input options. Take a look at the reference page
 
   station_id = 'f9c61373e7ca386c1fab06db'
 
-  results = ts.get_results(dataset_id, station_id, output='xarray')
+  results = ts.get_results(dataset_id, station_id)
   results
 
-Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the dataset metadata. Other options include a python dictionary and JSON. If the results represent geospatially sparse data, then the results are indexed by geometry, height, and time. If the results represent gridded data, then the results are indexed by lat, lon, height, and time. The geometry dimension is a hexadecimal encoded Well-Known Binary (WKB) representation of the geometry. This was used to be flexible on the geometry type (i.e. points, lines, or polygons) and the WKB ensures that the geometry is stored accurately. This is a standard format by the Open Geospatial Consortium (OGC) and can be parsed by many programs including shapely, PostGIS, etc. Using WKB in a geometry dimension does not follow CF conventions. This was a trade off between flexibility, simplicity, and following standards. I picked flexibility and simplicity.
+Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the dataset metadata. If the results represent geospatially sparse data, then the results are indexed by geometry, height, and time. If the results represent gridded data, then the results are indexed by lat, lon, height, and time. The geometry dimension is a hexadecimal encoded Well-Known Binary (WKB) representation of the geometry. This was used to be flexible on the geometry type (i.e. points, lines, or polygons) and the WKB ensures that the geometry is stored accurately. This is a standard format by the Open Geospatial Consortium (OGC) and can be parsed by many programs including shapely, PostGIS, etc. Using WKB in a geometry dimension does not follow CF conventions. This was a trade off between flexibility, simplicity, and following standards. I picked flexibility and simplicity.
 
 In addition to the get_stations spatial queries, the get_results method has a built-in nearest neighbour query if you omit the station_id and pass either geometry dict or a combination of latitude and longitude. This is especially useful for gridded results when each station represents a large area rather than a single point.
 
@@ -166,9 +166,26 @@ If you want to get more than one station per dataset, then you can still use the
   results
 
 
+Saving to hdf5 files
+~~~~~~~~~~~~~~~~~~~~
+Starting in version 4.5, Tethys can now save results directly to hdf5 files that can be opened by xarray. You must specify an output_path and optionally a compression for the hdf5 file (gzip is the default compression). There's no consern for excessive data volume in this process. You can download results from one station or all stations in a dataset to a single file without much trouble. It's recommended to save the file with the .h5 extension rather than the .nc extension to make it clear that it's a normal hdf5 file rather than a fully netcdf4-compliant file. Future versions might be formatted to be fully netcdf4-compliant...if I can figure out all of the nuances...any help is appreciated!
+
+.. code:: python
+
+    results = ts.get_results(dataset_id, station_ids, output_path='/my/local/path/results.h5', compression='lzf')
+
+
+And if you'd like to reopen the hdf5 file with xarray later, then you need to set engine='h5netcdf' in the xr.open_dataset function.
+
+.. code:: python
+
+    results = xr.open_dataset('/my/local/path/results.h5', engine='h5netcdf')
+
+
+
 Selective filters
 ~~~~~~~~~~~~~~~~~
-In Tethys version 4, the results have been saved into multiple chunks. These chunks contain specific time periods, heights, and stations. It is best to provide from_date, to_date, and heights filters to the get_results method so that less data needs to be downloaded and concatenated. If you don't, you might end up using a lot of RAM and processing time unnecessarily.
+In Tethys version 4, the results have been saved into multiple chunks. These chunks contain specific time periods, heights, and stations. It is best to provide from_date, to_date, and heights filters to the get_results method so that less data needs to be downloaded and concatenated. If you don't, you might end up downloading a lot of data, using a lot of RAM, and consuming a lot of processing time unnecessarily.
 
 Dataset versions
 ----------------
