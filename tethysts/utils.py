@@ -609,11 +609,26 @@ def url_stream_to_file(url, file_path, chunk_size=524288):
             with requests.get(url, stream=True, timeout=300) as r:
                 r.raise_for_status()
                 stream = ResponseStream(r.iter_content(chunk_size))
-                with open(file_path2, 'wb') as f:
-                    chunk = stream.read(chunk_size)
-                    while chunk:
-                        f.write(chunk)
+
+                if str(file_path2).endswith('.zst'):
+                    file_path2 = os.path.splitext(file_path2)[0]
+                    dctx = zstd.ZstdDecompressor()
+
+                    with open(file_path2, 'wb') as f:
+                        dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
+
+                elif str(file_path2).endswith('.gz'):
+                    file_path2 = os.path.splitext(file_path2)[0]
+
+                    with gzip.open(stream, 'rb') as s_file, open(file_path2, 'wb') as d_file:
+                        shutil.copyfileobj(s_file, d_file, chunk_size)
+
+                else:
+                    with open(file_path2, 'wb') as f:
                         chunk = stream.read(chunk_size)
+                        while chunk:
+                            f.write(chunk)
+                            chunk = stream.read(chunk_size)
 
                 break
 
