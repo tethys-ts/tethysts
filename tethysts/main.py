@@ -14,8 +14,8 @@ from datetime import datetime
 import copy
 # from multiprocessing.pool import ThreadPool
 import concurrent.futures
-from tethysts.utils import get_object_s3, result_filters, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, results_concat
-# from utils import get_object_s3, result_filters, process_results_output, read_json_zstd, get_nearest_station, get_intersected_stations, spatial_query, get_nearest_from_extent, read_pkl_zstd, public_remote_key, s3_client, chunk_filters, download_results, make_run_date_key, update_nested, xr_concat
+from tethysts.utils import read_json_zstd, spatial_query, get_nearest_from_extent, public_remote_key, chunk_filters, download_results, make_run_date_key, update_nested, results_concat
+from s3tethys import get_object_s3, s3_client, decompress_stream_to_object
 from typing import List, Union
 import tethys_data_models as tdm
 import pathlib
@@ -180,7 +180,7 @@ class Tethys(object):
 
             get_dict['obj_key'] = self._key_patterns[version]['datasets']
             ds_obj = get_object_s3(**get_dict)
-            ds_list = read_json_zstd(ds_obj)
+            ds_list = orjson.loads(decompress_stream_to_object(ds_obj, 'zstd').read())
 
             # [l.pop('properties') for l in ds_list2]
             self.datasets.extend(ds_list)
@@ -249,7 +249,7 @@ class Tethys(object):
             try:
                 remote['obj_key'] = stn_key
                 stn_obj = get_object_s3(**remote)
-                stn_list = read_json_zstd(stn_obj)
+                stn_list = orjson.loads(decompress_stream_to_object(stn_obj, 'zstd').read())
                 stn_dict = {s['station_id']: s for s in stn_list if isinstance(s, dict)}
                 update_nested(self._stations, dataset_id, vd, stn_dict)
             except:
@@ -317,7 +317,7 @@ class Tethys(object):
             remote1['obj_key'] = rc_key
             stn_obj = get_object_s3(**remote1)
 
-            rc_list = read_json_zstd(stn_obj)
+            rc_list = orjson.loads(decompress_stream_to_object(stn_obj, 'zstd').read())
 
             update_nested(self._results_chunks, dataset_id, version_date, rc_list)
 
@@ -345,7 +345,7 @@ class Tethys(object):
             remote['obj_key'] = rv_key
 
             rv_obj = get_object_s3(**remote)
-            rv_list = read_json_zstd(rv_obj)
+            rv_list = orjson.loads(decompress_stream_to_object(rv_obj, 'zstd').read())
 
             self._versions[dataset_id] = rv_list
 
