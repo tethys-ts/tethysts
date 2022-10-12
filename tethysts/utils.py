@@ -2,10 +2,10 @@
 
 
 """
-from io import BytesIO, SEEK_SET, SEEK_END, DEFAULT_BUFFER_SIZE
+import io
 import os
 import numpy as np
-import requests
+# import requests
 import xarray as xr
 import pandas as pd
 import orjson
@@ -13,20 +13,22 @@ from datetime import datetime
 import zstandard as zstd
 import pickle
 import copy
-import boto3
+# import boto3
 import botocore
 from time import sleep
 from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
 from scipy import spatial
-import tethys_data_models as tdm
+# import tethys_data_models as tdm
 import pathlib
-from functools import partial
+# from functools import partial
 from pydantic import HttpUrl
-import shutil
-import gzip
+# import shutil
+# import gzip
 import hdf5tools
+import s3tethys
+# import smart_open
 # import psutil
 
 pd.options.display.max_columns = 10
@@ -38,7 +40,9 @@ b2_public_key_pattern = '{base_url}/{bucket}/{obj_key}'
 contabo_public_key_pattern = '{base_url}:{bucket}/{obj_key}'
 public_remote_key = 'https://b2.tethys-ts.xyz/file/tethysts/tethys/public_remotes_v4.json.zst'
 
-local_results_name = '{ds_id}/{stn_id}/{chunk_id}.{version_date}.{chunk_hash}.nc'
+local_results_name = '{ds_id}/{version_date}/{stn_id}/{chunk_id}.{chunk_hash}.results.h5'
+
+s3_url_base = 's3://{bucket}/{key}'
 
 ##############################################
 ### Helper functions
@@ -84,50 +88,50 @@ def create_public_s3_url(base_url, bucket, obj_key):
     return key
 
 
-class ResponseStream(object):
-    """
-    In many applications, you'd like to access a requests response as a file-like object, simply having .read(), .seek(), and .tell() as normal. Especially when you only want to partially download a file, it'd be extra convenient if you could use a normal file interface for it, loading as needed.
+# class ResponseStream(object):
+#     """
+#     In many applications, you'd like to access a requests response as a file-like object, simply having .read(), .seek(), and .tell() as normal. Especially when you only want to partially download a file, it'd be extra convenient if you could use a normal file interface for it, loading as needed.
 
-This is a wrapper class for doing that. Only bytes you request will be loaded - see the example in the gist itself.
+# This is a wrapper class for doing that. Only bytes you request will be loaded - see the example in the gist itself.
 
-https://gist.github.com/obskyr/b9d4b4223e7eaf4eedcd9defabb34f13
-    """
-    def __init__(self, request_iterator):
-        self._bytes = BytesIO()
-        self._iterator = request_iterator
+# https://gist.github.com/obskyr/b9d4b4223e7eaf4eedcd9defabb34f13
+#     """
+#     def __init__(self, request_iterator):
+#         self._bytes = BytesIO()
+#         self._iterator = request_iterator
 
-    def _load_all(self):
-        self._bytes.seek(0, SEEK_END)
-        for chunk in self._iterator:
-            self._bytes.write(chunk)
+#     def _load_all(self):
+#         self._bytes.seek(0, SEEK_END)
+#         for chunk in self._iterator:
+#             self._bytes.write(chunk)
 
-    def _load_until(self, goal_position):
-        current_position = self._bytes.seek(0, SEEK_END)
-        while current_position < goal_position:
-            try:
-                current_position += self._bytes.write(next(self._iterator))
-            except StopIteration:
-                break
+#     def _load_until(self, goal_position):
+#         current_position = self._bytes.seek(0, SEEK_END)
+#         while current_position < goal_position:
+#             try:
+#                 current_position += self._bytes.write(next(self._iterator))
+#             except StopIteration:
+#                 break
 
-    def tell(self):
-        return self._bytes.tell()
+#     def tell(self):
+#         return self._bytes.tell()
 
-    def read(self, size=None):
-        left_off_at = self._bytes.tell()
-        if size is None:
-            self._load_all()
-        else:
-            goal_position = left_off_at + size
-            self._load_until(goal_position)
+#     def read(self, size=None):
+#         left_off_at = self._bytes.tell()
+#         if size is None:
+#             self._load_all()
+#         else:
+#             goal_position = left_off_at + size
+#             self._load_until(goal_position)
 
-        self._bytes.seek(left_off_at)
-        return self._bytes.read(size)
+#         self._bytes.seek(left_off_at)
+#         return self._bytes.read(size)
 
-    def seek(self, position, whence=SEEK_SET):
-        if whence == SEEK_END:
-            self._load_all()
-        else:
-            self._bytes.seek(position, whence)
+#     def seek(self, position, whence=SEEK_SET):
+#         if whence == SEEK_END:
+#             self._load_all()
+#         else:
+#             self._bytes.seek(position, whence)
 
 
 def cartesian_product(*arrays):
@@ -301,126 +305,131 @@ def read_json_zstd(obj):
     return dict1
 
 
-def s3_client(connection_config: dict, max_pool_connections: int = 30):
-    """
-    Function to establish a client connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
+# def s3_client(connection_config: dict, max_pool_connections: int = 30):
+#     """
+#     Function to establish a client connection with an S3 account. This can use the legacy connect (signature_version s3) and the curent version.
 
-    Parameters
-    ----------
-    connection_config : dict
-        A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
-    max_pool_connections : int
-        The number of simultaneous connections for the S3 connection.
+#     Parameters
+#     ----------
+#     connection_config : dict
+#         A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, endpoint_url, aws_access_key_id, and aws_secret_access_key. connection_config can also be a URL to a public S3 bucket.
+#     max_pool_connections : int
+#         The number of simultaneous connections for the S3 connection.
 
-    Returns
-    -------
-    S3 client object
-    """
-    ## Validate config
-    _ = tdm.base.ConnectionConfig(**connection_config)
+#     Returns
+#     -------
+#     S3 client object
+#     """
+#     ## Validate config
+#     _ = tdm.base.ConnectionConfig(**connection_config)
 
-    s3_config = copy.deepcopy(connection_config)
+#     s3_config = copy.deepcopy(connection_config)
 
-    if 'config' in s3_config:
-        config0 = s3_config.pop('config')
-        config0.update({'max_pool_connections': max_pool_connections})
-        config1 = boto3.session.Config(**config0)
+#     if 'config' in s3_config:
+#         config0 = s3_config.pop('config')
+#         config0.update({'max_pool_connections': max_pool_connections})
+#         config1 = boto3.session.Config(**config0)
 
-        s3_config1 = s3_config.copy()
-        s3_config1.update({'config': config1})
+#         s3_config1 = s3_config.copy()
+#         s3_config1.update({'config': config1})
 
-        s3 = boto3.client(**s3_config1)
-    else:
-        s3_config.update({'config': botocore.config.Config(max_pool_connections=max_pool_connections)})
-        s3 = boto3.client(**s3_config)
+#         s3 = boto3.client(**s3_config1)
+#     else:
+#         s3_config.update({'config': botocore.config.Config(max_pool_connections=max_pool_connections)})
+#         s3 = boto3.client(**s3_config)
 
-    return s3
+#     return s3
 
 
-def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl=None, version_id=None, range_start: int=None, range_end: int=None, counter=5):
-    """
-    General function to get an object from an S3 bucket. One of s3, connection_config, or public_url must be used.
+# def get_object_s3(obj_key: str, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl=None, version_id=None, range_start: int=None, range_end: int=None, chunk_size=524288, counter=5):
+#     """
+#     General function to get an object from an S3 bucket. One of s3, connection_config, or public_url must be used.
 
-    Parameters
-    ----------
-    obj_key : str
-        The object key in the S3 bucket.
-    s3 : botocore.client.BaseClient
-        An S3 object created via the s3_client function.
-    connection_config : dict
-        A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
-    public_url : str
-        A URL to a public S3 bucket. This is generally only used for Backblaze object storage.
-    bucket : str
-        The bucket name.
-    counter : int
-        Number of times to retry to get the object.
+#     Parameters
+#     ----------
+#     obj_key : str
+#         The object key in the S3 bucket.
+#     s3 : botocore.client.BaseClient
+#         An S3 client object created via the s3_client function.
+#     connection_config : dict
+#         A dictionary of the connection info necessary to establish an S3 connection. It should contain service_name, s3, endpoint_url, aws_access_key_id, and aws_secret_access_key.
+#     public_url : str
+#         A URL to a public S3 bucket. This is generally only used for Backblaze object storage.
+#     bucket : str
+#         The bucket name.
+#     counter : int
+#         Number of times to retry to get the object.
 
-    Returns
-    -------
-    bytes
-        bytes object of the S3 object.
-    """
-    counter1 = counter
+#     Returns
+#     -------
+#     bytes
+#         bytes object of the S3 object.
+#     """
+#     counter1 = counter
 
-    get_dict = {'Key': obj_key, 'Bucket': bucket}
+#     transport_params = {'buffer_size': chunk_size}
 
-    if isinstance(version_id, str):
-        get_dict['VersionId'] = version_id
+#     if isinstance(version_id, str):
+#         transport_params['version_id'] = version_id
 
-    ## Range
-    range_dict = {}
+#     ## Headers
+#     headers = {}
+#     # Range
+#     range_dict = {}
 
-    if range_start is not None:
-        range_dict['start'] = str(range_start)
-    else:
-        range_dict['start'] = ''
+#     if range_start is not None:
+#         range_dict['start'] = str(range_start)
+#     else:
+#         range_dict['start'] = ''
 
-    if range_end is not None:
-        range_dict['end'] = str(range_end)
-    else:
-        range_dict['end'] = ''
+#     if range_end is not None:
+#         range_dict['end'] = str(range_end)
+#     else:
+#         range_dict['end'] = ''
 
-    if range_dict:
-        get_dict['Range'] = 'bytes={start}-{end}'.format(**range_dict)
+#     ## Get the object
+#     while True:
+#         try:
+#             if isinstance(public_url, str) and (version_id is None):
+#                 url = create_public_s3_url(public_url, bucket, obj_key)
 
-    ## Get the object
-    while True:
-        try:
-            if isinstance(public_url, str) and (version_id is None):
-                url = create_public_s3_url(public_url, bucket, obj_key)
-                resp = requests.get(url, timeout=300)
-                resp.raise_for_status()
+#                 if range_dict:
+#                     range1 = 'bytes={start}-{end}'.format(**range_dict)
+#                     headers['Range'] = range1
 
-                ts_obj = resp.content
+#                 file_obj = smart_open.open(url, 'rb', headers=headers, transport_params=transport_params)
 
-            elif isinstance(s3, botocore.client.BaseClient):
-                ts_resp = s3.get_object(**get_dict)
-                ts_obj = ts_resp.pop('Body').read()
+#             elif isinstance(s3, botocore.client.BaseClient) or isinstance(connection_config, dict):
+#                 if range_dict:
+#                     range1 = 'bytes={start}-{end}'.format(**range_dict)
+#                     transport_params.update({'client_kwargs': {'S3.Client.get_object': {'Range': range1}}})
 
-            elif isinstance(connection_config, dict):
-                ## Validate config
-                _ = tdm.base.ConnectionConfig(**connection_config)
+#                 if s3 is None:
+#                     _ = tdm.base.ConnectionConfig(**connection_config)
 
-                s3 = s3_client(connection_config)
+#                     s3 = s3_client(connection_config)
 
-                ts_resp = s3.get_object(**get_dict)
-                ts_obj = ts_resp.pop('Body').read()
-            else:
-                raise TypeError('One of s3, connection_config, or public_url needs to be correctly defined.')
-            break
-        except:
-            # print(traceback.format_exc())
-            if counter1 == 0:
-                # raise ValueError('Could not properly download the object after several tries')
-                print('Object could not be downloaded.')
-                return None
-            else:
-                # print('Could not properly extract the object; trying again in 5 seconds')
-                counter1 = counter1 - 1
-                sleep(5)
+#                 s3_url = s3_url_base.format(bucket=bucket, key=obj_key)
+#                 transport_params['client'] = s3
 
-    return ts_obj
+#                 file_obj = smart_open.open(s3_url, 'rb', transport_params=transport_params)
+
+#             else:
+#                 raise TypeError('One of s3, connection_config, or public_url needs to be correctly defined.')
+
+#             break
+#         except:
+#             # print(traceback.format_exc())
+#             if counter1 == 0:
+#                 # raise ValueError('Could not properly download the object after several tries')
+#                 print('Object could not be downloaded.')
+#                 return None
+#             else:
+#                 # print('Could not properly extract the object; trying again in 5 seconds')
+#                 counter1 = counter1 - 1
+#                 sleep(3)
+
+#     return file_obj
 
 
 def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, to_date=None, heights=None, bands=None):
@@ -576,64 +585,154 @@ def result_filters(data, from_date=None, to_date=None, from_mod_date=None, to_mo
 #         yield data
 
 
-def local_file_byte_iterator(path, chunk_size=DEFAULT_BUFFER_SIZE):
-    """given a path, return an iterator over the file
-    that lazily loads the file.
-    https://stackoverflow.com/a/37222446/6952674
-    """
-    path = pathlib.Path(path)
-    with path.open('rb') as file:
-        reader = partial(file.read1, DEFAULT_BUFFER_SIZE)
-        file_iterator = iter(reader, bytes())
-        for chunk in file_iterator:
-            yield from chunk
+# def local_file_byte_iterator(path, chunk_size=DEFAULT_BUFFER_SIZE):
+#     """given a path, return an iterator over the file
+#     that lazily loads the file.
+#     https://stackoverflow.com/a/37222446/6952674
+#     """
+#     path = pathlib.Path(path)
+#     with path.open('rb') as file:
+#         reader = partial(file.read1, DEFAULT_BUFFER_SIZE)
+#         file_iterator = iter(reader, bytes())
+#         for chunk in file_iterator:
+#             yield from chunk
 
 
-def url_stream_to_file(url, file_path, chunk_size=524288):
-    """
+# def stream_to_file(file_obj, file_path, chunk_size=524288):
+#     """
 
-    """
-    file_path1 = pathlib.Path(file_path)
-    if file_path1.is_dir():
-        file_name = url.split('/')[-1]
-        file_path2 = str(file_path1.joinpath(file_name))
-    else:
-        file_path2 = file_path
+#     """
+#     file_path1 = pathlib.Path(file_path)
+#     file_path1.parent.mkdir(parents=True, exist_ok=True)
 
-    base_path = os.path.split(file_path2)[0]
-    os.makedirs(base_path, exist_ok=True)
+#     with open(file_path1, 'wb') as f:
+#         chunk = file_obj.read(chunk_size)
+#         while chunk:
+#             f.write(chunk)
+#             chunk = file_obj.read(chunk_size)
 
-    counter = 4
-    while True:
-        try:
-            with requests.get(url, stream=True, timeout=300) as r:
-                r.raise_for_status()
-                stream = ResponseStream(r.iter_content(chunk_size))
-                with open(file_path2, 'wb') as f:
-                    chunk = stream.read(chunk_size)
-                    while chunk:
-                        f.write(chunk)
-                        chunk = stream.read(chunk_size)
 
-                break
+# def decompress_stream_to_file(file_obj, file_path, chunk_size=524288):
+#     """
 
-        except Exception as err:
-            if counter < 1:
-                raise err
-            else:
-                counter = counter - 1
-                sleep(5)
+#     """
+#     file_path1 = pathlib.Path(file_path)
+#     file_path1.parent.mkdir(parents=True, exist_ok=True)
 
-    return file_path2
+#     if file_path1.suffix == '.zst':
+#         file_path2 = file_path1.stem
+#         dctx = zstd.ZstdDecompressor()
+
+#         with open(file_path2, 'wb') as f:
+#             dctx.copy_stream(file_obj, f, read_size=chunk_size, write_size=chunk_size)
+
+#     elif file_path1.suffix == '.gz':
+#         file_path2 = file_path1.stem
+
+#         with gzip.open(file_obj, 'rb') as s_file, open(file_path2, 'wb') as d_file:
+#             shutil.copyfileobj(s_file, d_file, chunk_size)
+
+#     else:
+#         file_path2 = file_path1
+#         stream_to_file(file_obj, file_path2, chunk_size)
+
+#     return str(file_path2)
+
+
+# def decompress_stream_to_object(file_obj, compression, chunk_size=524288):
+#     """
+
+#     """
+#     b1 = BytesIO()
+
+#     if compression == 'zstd':
+#         dctx = zstd.ZstdDecompressor()
+
+#         with open(b1, 'wb') as f:
+#             dctx.copy_stream(file_obj, f, read_size=chunk_size, write_size=chunk_size)
+
+#     elif compression == '.gz':
+
+#         with gzip.open(file_obj, 'rb') as s_file, open(b1, 'wb') as d_file:
+#             shutil.copyfileobj(s_file, d_file, chunk_size)
+
+#     else:
+#         with open(b1, 'wb') as f:
+#             chunk = file_obj.read(chunk_size)
+#             while chunk:
+#                 f.write(chunk)
+#                 chunk = file_obj.read(chunk_size)
+
+#     return b1
+
+
+# def url_stream_to_file(url, file_path, decompress=False, chunk_size=524288):
+#     """
+
+#     """
+#     file_path1 = pathlib.Path(file_path)
+#     if file_path1.is_dir():
+#         file_name = url.split('/')[-1]
+#         file_path2 = str(file_path1.joinpath(file_name))
+#     else:
+#         file_path2 = file_path
+
+#     base_path = os.path.split(file_path2)[0]
+#     os.makedirs(base_path, exist_ok=True)
+
+#     counter = 4
+#     while True:
+#         try:
+#             with requests.get(url, stream=True, timeout=300) as r:
+#                 r.raise_for_status()
+#                 stream = ResponseStream(r.iter_content(chunk_size))
+
+#                 if decompress:
+#                     if str(file_path2).endswith('.zst'):
+#                         file_path2 = os.path.splitext(file_path2)[0]
+#                         dctx = zstd.ZstdDecompressor()
+    
+#                         with open(file_path2, 'wb') as f:
+#                             dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
+    
+#                     elif str(file_path2).endswith('.gz'):
+#                         file_path2 = os.path.splitext(file_path2)[0]
+    
+#                         with gzip.open(stream, 'rb') as s_file, open(file_path2, 'wb') as d_file:
+#                             shutil.copyfileobj(s_file, d_file, chunk_size)
+    
+#                     else:
+#                         with open(file_path2, 'wb') as f:
+#                             chunk = stream.read(chunk_size)
+#                             while chunk:
+#                                 f.write(chunk)
+#                                 chunk = stream.read(chunk_size)
+#                 else:
+#                     with open(file_path2, 'wb') as f:
+#                         chunk = stream.read(chunk_size)
+#                         while chunk:
+#                             f.write(chunk)
+#                             chunk = stream.read(chunk_size)
+
+#                 break
+
+#         except Exception as err:
+#             if counter < 1:
+#                 raise err
+#             else:
+#                 counter = counter - 1
+#                 sleep(5)
+
+#     return file_path2
 
 
 def process_dataset_obj(results, from_date=None, to_date=None):
     """
 
     """
-    if isinstance(results, BytesIO):
+    if isinstance(results, io.BytesIO):
         try:
-            data = xr.load_dataset(results, engine='h5netcdf')
+            data = xr.load_dataset(results, engine='h5netcdf', cache=False)
         except:
             data = xr.load_dataset(results)
     elif isinstance(results, xr.Dataset):
@@ -643,7 +742,7 @@ def process_dataset_obj(results, from_date=None, to_date=None):
 
     data = result_filters(data, from_date, to_date)
 
-    data_obj = BytesIO()
+    data_obj = io.BytesIO()
     hdf5tools.xr_to_hdf5(data, data_obj)
 
     data.close()
@@ -657,39 +756,33 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
     """
 
     """
+    file_obj = s3tethys.get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
+
     if isinstance(cache, pathlib.Path):
         chunk_hash = chunk['chunk_hash']
         version_date = pd.Timestamp(chunk['version_date']).strftime('%Y%m%d%H%M%SZ')
         results_file_name = local_results_name.format(ds_id=chunk['dataset_id'], stn_id=chunk['station_id'], chunk_id=chunk['chunk_id'], version_date=version_date, chunk_hash=chunk_hash)
         chunk_path = cache.joinpath(results_file_name)
-        chunk_path.parent.mkdir(parents=True, exist_ok=True)
 
         if not chunk_path.exists():
+            chunk_path.parent.mkdir(parents=True, exist_ok=True)
+
             if chunk['key'].endswith('.zst'):
-                data_obj = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
-                data = xr.load_dataset(read_pkl_zstd(data_obj))
+                data = xr.load_dataset(s3tethys.decompress_stream_to_object(file_obj, 'zstd'))
                 hdf5tools.xr_to_hdf5(data, chunk_path)
-            elif public_url is not None:
-                url = create_public_s3_url(public_url, bucket, chunk['key'])
-                _ = url_stream_to_file(url, chunk_path)
             else:
-                data_obj = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
-                with open(chunk_path, 'wb') as f:
-                    f.write(data_obj)
+                s3tethys.stream_to_file(file_obj, chunk_path)
 
         data_obj = chunk_path
 
     else:
-        data_obj = get_object_s3(chunk['key'], bucket, s3, connection_config, public_url)
-
         if return_raw:
-            return data_obj
+            return file_obj
 
         if chunk['key'].endswith('.zst'):
-            data_obj = read_pkl_zstd(data_obj)
-        data_obj = BytesIO(data_obj)
+            file_obj = s3tethys.decompress_stream_to_object(file_obj, 'zstd')
 
-        data_obj = process_dataset_obj(data_obj, from_date=from_date, to_date=to_date)
+        data_obj = process_dataset_obj(file_obj, from_date=from_date, to_date=to_date)
 
     return data_obj
 
@@ -760,7 +853,7 @@ def results_concat(results_list, output_path=None, from_date=None, to_date=None,
 
     """
     if output_path is None:
-        temp_path = BytesIO()
+        temp_path = io.BytesIO()
     else:
         temp_path = output_path + '.temp'
 

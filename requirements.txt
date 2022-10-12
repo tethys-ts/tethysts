@@ -1,6 +1,5 @@
 pyyaml
 pandas
-boto3
 xarray
 scipy
 orjson
@@ -9,3 +8,4 @@ zstandard
 shapely
 tethys-data-models
 hdf5tools
+s3tethys
