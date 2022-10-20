@@ -544,6 +544,8 @@ class Tethys(object):
     
             ## Clear xarray cache...because it loves caching everything...
             ## This is to ensure that xarray will open the file rather than opening a cache
+            ## The next xarray version should have this issue fixed:
+            ## https://github.com/pydata/xarray/pull/4879
             xr.backends.file_manager.FILE_CACHE.clear()
     
             ## combine results
