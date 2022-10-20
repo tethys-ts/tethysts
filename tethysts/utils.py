@@ -726,28 +726,14 @@ def result_filters(data, from_date=None, to_date=None, from_mod_date=None, to_mo
 #     return file_path2
 
 
-def process_dataset_obj(results, from_date=None, to_date=None):
+def process_dataset(data, from_date=None, to_date=None):
     """
-
+    Stupid xarray being inefficient at parsing file objects...
     """
-    if isinstance(results, io.BytesIO):
-        try:
-            data = xr.load_dataset(results, engine='h5netcdf', cache=False)
-        except:
-            data = xr.load_dataset(results)
-    elif isinstance(results, xr.Dataset):
-        data = results
-    else:
-        raise TypeError('Not the right data type.')
-
     data = result_filters(data, from_date, to_date)
 
     data_obj = io.BytesIO()
     hdf5tools.xr_to_hdf5(data, data_obj)
-
-    data.close()
-    del data
-    del results
 
     return data_obj
 
@@ -781,8 +767,16 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
 
         if chunk['key'].endswith('.zst'):
             file_obj = s3tethys.decompress_stream_to_object(file_obj, 'zstd')
+            data = xr.load_dataset(file_obj.read(), engine='scipy')
+        else:
+            data = xr.load_dataset(io.BytesIO(file_obj.read()), engine='h5netcdf')
 
-        data_obj = process_dataset_obj(file_obj, from_date=from_date, to_date=to_date)
+        data_obj = process_dataset(data, from_date=from_date, to_date=to_date)
+
+        data.close()
+        del data
+
+    del file_obj
 
     return data_obj
 
