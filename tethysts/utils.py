@@ -26,10 +26,11 @@ import pathlib
 from pydantic import HttpUrl
 # import shutil
 # import gzip
-import hdf5tools
+from hdf5tools import H5
 import s3tethys
 # import smart_open
 # import psutil
+from pprint import pprint
 
 pd.options.display.max_columns = 10
 
@@ -496,61 +497,49 @@ def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, t
 #     return data
 
 
-def remove_results_junk(data):
+# def remove_results_junk(data):
+#     """
+
+#     """
+#     chunk_vars = [v for v in list(data.variables) if 'chunk' in v]
+#     if chunk_vars:
+#         data = data.drop_vars(chunk_vars)
+
+#     # crap_vars = [v for v in list(data.variables) if 'string' in v]
+#     # if crap_vars:
+#     #     data = data.drop_vars(crap_vars)
+
+#     # if 'geometry' in data.dims:
+#     #     stn_vars = [v for v in list(data.data_vars) if ('time' not in data[v].dims) and (v not in ['station_id', 'lon', 'lat'])]
+#     #     data = data.drop_vars(stn_vars)
+
+#     if 'station_geometry' in data.dims:
+#         stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
+#         data = data.drop_vars(stn_vars)
+
+#     return data
+
+
+def result_filters(h5, from_date=None, to_date=None):
     """
 
     """
-    chunk_vars = [v for v in list(data.variables) if 'chunk' in v]
-    if chunk_vars:
-        data = data.drop_vars(chunk_vars)
+    h5 = h5.sel(exclude_coords=['station_geometry', 'chunk_date'])
 
-    # crap_vars = [v for v in list(data.variables) if 'string' in v]
-    # if crap_vars:
-    #     data = data.drop_vars(crap_vars)
-    
-    # if 'geometry' in data.dims:
-    #     stn_vars = [v for v in list(data.data_vars) if ('time' not in data[v].dims) and (v not in ['station_id', 'lon', 'lat'])]
-    #     data = data.drop_vars(stn_vars)
-    
-    if 'station_geometry' in data.dims:
-        stn_vars = [d for d in data.variables if 'station_geometry' in data[d].dims]
-        data = data.drop_vars(stn_vars)
-
-    return data
-
-
-def result_filters(data, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None):
-    """
-
-    """
-    data = remove_results_junk(data)
-
+    ## Time filters
     if isinstance(from_date, (str, pd.Timestamp, datetime)):
-        from_date1 = pd.Timestamp(from_date)
+        from_date1 = np.datetime64(from_date)
     else:
         from_date1 = None
     if isinstance(to_date, (str, pd.Timestamp, datetime)):
-        to_date1 = pd.Timestamp(to_date)
+        to_date1 = np.datetime64(to_date)
     else:
         to_date1 = None
 
-    if isinstance(from_mod_date, (str, pd.Timestamp, datetime)):
-        from_mod_date1 = pd.Timestamp(from_mod_date)
-    else:
-        from_mod_date1 = None
-    if isinstance(to_mod_date, (str, pd.Timestamp, datetime)):
-        to_mod_date1 = pd.Timestamp(to_mod_date)
-    else:
-        to_mod_date1 = None
-
     if (to_date1 is not None) or (from_date1 is not None):
-        data = data.sel(time=slice(from_date1, to_date1))
+        h5 = h5.sel({'time': slice(from_date1, to_date1)})
 
-    if (to_mod_date1 is not None) or (from_mod_date1 is not None):
-        if 'modified_date' in data:
-            data = data.sel(modified_date=slice(from_mod_date1, to_mod_date1))
-
-    return data
+    return h5
 
 
 # def process_results_output(ts_xr, output='xarray', squeeze_dims=False):
@@ -691,16 +680,16 @@ def result_filters(data, from_date=None, to_date=None, from_mod_date=None, to_mo
 #                     if str(file_path2).endswith('.zst'):
 #                         file_path2 = os.path.splitext(file_path2)[0]
 #                         dctx = zstd.ZstdDecompressor()
-    
+
 #                         with open(file_path2, 'wb') as f:
 #                             dctx.copy_stream(stream, f, read_size=chunk_size, write_size=chunk_size)
-    
+
 #                     elif str(file_path2).endswith('.gz'):
 #                         file_path2 = os.path.splitext(file_path2)[0]
-    
+
 #                         with gzip.open(stream, 'rb') as s_file, open(file_path2, 'wb') as d_file:
 #                             shutil.copyfileobj(s_file, d_file, chunk_size)
-    
+
 #                     else:
 #                         with open(file_path2, 'wb') as f:
 #                             chunk = stream.read(chunk_size)
@@ -726,16 +715,19 @@ def result_filters(data, from_date=None, to_date=None, from_mod_date=None, to_mo
 #     return file_path2
 
 
-def process_dataset(data, from_date=None, to_date=None):
-    """
-    Stupid xarray being inefficient at parsing file objects...
-    """
-    data = result_filters(data, from_date, to_date)
+# def process_dataset(data, from_date=None, to_date=None):
+#     """
+#     Stupid xarray being inefficient at parsing file objects...
+#     """
+#     ## Remove junk fields
+#     h1 = H5(data).sel(exclude_coords=['station_geometry', 'chunk_date'])
 
-    data_obj = io.BytesIO()
-    hdf5tools.xr_to_hdf5(data, data_obj)
+#     h2 = result_filters(h1, from_date, to_date)
 
-    return data_obj
+#     data_obj = io.BytesIO()
+#     h2.to_hdf5(data_obj)
+
+#     return data_obj
 
 
 def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = None, connection_config: dict = None, public_url: HttpUrl = None, cache: Union[pathlib.Path] = None, from_date=None, to_date=None, return_raw=False):
@@ -755,7 +747,9 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
 
             if chunk['key'].endswith('.zst'):
                 data = xr.load_dataset(s3tethys.decompress_stream_to_object(file_obj, 'zstd'))
-                hdf5tools.xr_to_hdf5(data, chunk_path)
+                H5(data).sel(exclude_coords=['station_geometry', 'chunk_date']).to_hdf5(chunk_path)
+                data.close()
+                del data
             else:
                 s3tethys.stream_to_file(file_obj, chunk_path)
 
@@ -771,10 +765,13 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
         else:
             data = xr.load_dataset(io.BytesIO(file_obj.read()), engine='h5netcdf')
 
-        data_obj = process_dataset(data, from_date=from_date, to_date=to_date)
+        h1 = H5(data).sel(exclude_coords=['station_geometry', 'chunk_date'])
+        data_obj = io.BytesIO()
+        h1.to_hdf5(data_obj)
 
         data.close()
         del data
+        del h1
 
     del file_obj
 
@@ -842,25 +839,18 @@ def xr_concat(datasets: List[xr.Dataset]):
     return xr3
 
 
-def results_concat(results_list, output_path=None, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, compression='gzip'):
+def results_concat(results_list, output_path=None, from_date=None, to_date=None, compression='lzf'):
     """
 
     """
     if output_path is None:
-        temp_path = io.BytesIO()
-    else:
-        temp_path = output_path + '.temp'
+        output_path = io.BytesIO()
 
-    hdf5tools.combine_hdf5(results_list, temp_path, compression='zstd')
+    h1 = H5(results_list)
+    h1 = result_filters(h1, from_date, to_date)
+    h1.to_hdf5(output_path, compression=compression)
 
-    xr3 = xr.open_dataset(temp_path, engine='h5netcdf', cache=False)
-    xr3 = result_filters(xr3, from_date, to_date, from_mod_date, to_mod_date)
-
-    if isinstance(output_path, (str, pathlib.Path)):
-        hdf5tools.xr_to_hdf5(xr3, output_path, compression=compression)
-        xr3.close()
-        xr3 = xr.open_dataset(output_path, engine='h5netcdf', cache=False)
-        os.remove(temp_path)
+    xr3 = xr.open_dataset(output_path, engine='h5netcdf', cache=False)
 
     return xr3
 
