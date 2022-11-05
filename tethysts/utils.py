@@ -746,7 +746,7 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
             chunk_path.parent.mkdir(parents=True, exist_ok=True)
 
             if chunk['key'].endswith('.zst'):
-                data = xr.load_dataset(s3tethys.decompress_stream_to_object(file_obj, 'zstd'))
+                data = xr.load_dataset(s3tethys.decompress_stream_to_object(io.BytesIO(file_obj.read()), 'zstd'))
                 H5(data).sel(exclude_coords=['station_geometry', 'chunk_date']).to_hdf5(chunk_path)
                 data.close()
                 del data
@@ -760,16 +760,18 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
             return file_obj
 
         if chunk['key'].endswith('.zst'):
-            file_obj = s3tethys.decompress_stream_to_object(file_obj, 'zstd')
+            file_obj = s3tethys.decompress_stream_to_object(io.BytesIO(file_obj.read()), 'zstd')
             data = xr.load_dataset(file_obj.read(), engine='scipy')
         else:
-            data = xr.load_dataset(io.BytesIO(file_obj.read()), engine='h5netcdf')
+            data = io.BytesIO(file_obj.read())
 
-        h1 = H5(data).sel(exclude_coords=['station_geometry', 'chunk_date'])
+        h1 = H5(data)
         data_obj = io.BytesIO()
+        h1 = result_filters(h1)
         h1.to_hdf5(data_obj)
 
-        data.close()
+        if isinstance(data, xr.Dataset):
+            data.close()
         del data
         del h1
 

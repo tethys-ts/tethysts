@@ -233,8 +233,8 @@ remote = {'bucket': 'met-solutions', 'public_url': 'https://b2.tethys-ts.xyz/fil
 remote = {'bucket': 'tasman-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'noaa-nwm', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
-# cache = '/media/nvme1/cache/tethys'
-cache = '/home/mike/cache/tethys'
+cache = '/media/nvme1/cache/tethys'
+# cache = '/home/mike/cache/tethys'
 
 dataset_id = '7751c5f1bf47867fb109d7eb'
 dataset_id = '0b2bd62cc42f3096136f11e9'
@@ -293,12 +293,12 @@ station_ids = [s['station_id'] for s in stns1[:2]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
-results1 = self.get_results(dataset_id, station_ids, heights=None, output_path='/home/mike/cache/tethys/test.h5', compression='zstd')
+results1 = self.get_results(dataset_id, station_ids, heights=None, output_path='/media/nvme1/cache/tethys/test.h5', compression='zstd')
 
 results1 = self.get_results(dataset_id, station_ids, heights=[10, 20, 30, 80], version_date=version_date)
 
 results1 = self.get_results(dataset_id, station_ids, heights=[10])
-results1 = self.get_results(dataset_id, station_ids, heights=[10], output_path='/home/mike/cache/tethys/test.h5', compression='zstd')
+results1 = self.get_results(dataset_id, station_ids, heights=[10], output_path='/media/nvme1/cache/tethys/test.h5', compression='zstd')
 
 results1 = self.get_results(dataset_id, station_ids, heights=[10], from_date='2020-04-01')
 
@@ -450,9 +450,9 @@ for iy, y in enumerate(y_range[1:]):
         # If stations are found, then get the associated results
         if stn_ids:
             results = ts.get_results(dataset_id, stn_ids, heights=heights)
-    
+
             output_file = '{ds}_{min_x}_{min_y}_{max_x}_{max_y}.nc'.format(ds=dataset_id, min_x=min_x, min_y=min_y, max_x=x, max_y=y)
-    
+
             # Save the file to netcdf (xarray uses an excessive amount of memory when saving to netcdf, so be careful...)
             results.to_netcdf(os.path.join(output_path, output_file))
             results.close()
