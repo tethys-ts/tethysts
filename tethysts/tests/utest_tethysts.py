@@ -1,4 +1,5 @@
 from tethysts import Tethys
+import xarray as xr
 import yaml
 import pandas as pd
 import os
@@ -289,7 +290,7 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:2]]
+station_ids = [s['station_id'] for s in stns1[:100]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)

@@ -747,7 +747,7 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
 
             if chunk['key'].endswith('.zst'):
                 data = xr.load_dataset(s3tethys.decompress_stream_to_object(io.BytesIO(file_obj.read()), 'zstd'))
-                H5(data).sel(exclude_coords=['station_geometry', 'chunk_date']).to_hdf5(chunk_path)
+                H5(data).sel(exclude_coords=['station_geometry', 'chunk_date']).to_hdf5(chunk_path, compression='zstd')
                 data.close()
                 del data
             else:
@@ -768,7 +768,7 @@ def download_results(chunk: dict, bucket: str, s3: botocore.client.BaseClient = 
         h1 = H5(data)
         data_obj = io.BytesIO()
         h1 = result_filters(h1)
-        h1.to_hdf5(data_obj)
+        h1.to_hdf5(data_obj, compression='zstd')
 
         if isinstance(data, xr.Dataset):
             data.close()
@@ -847,6 +847,7 @@ def results_concat(results_list, output_path=None, from_date=None, to_date=None,
     """
     if output_path is None:
         output_path = io.BytesIO()
+        compression = 'zstd'
 
     h1 = H5(results_list)
     h1 = result_filters(h1, from_date, to_date)
