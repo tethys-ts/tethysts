@@ -233,13 +233,15 @@ remote = {'bucket': 'met-service', 'public_url': 'https://b2.nzrivers.xyz/file/'
 remote = {'bucket': 'met-solutions', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'tasman-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'noaa-nwm', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'jaxa-data', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'linz-data', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 # cache = '/home/mike/cache/tethys'
 
 dataset_id = '7751c5f1bf47867fb109d7eb'
 dataset_id = '0b2bd62cc42f3096136f11e9'
-# dataset_id = '0de7cbfe05aebc2272ceba17'
+dataset_id = 'fb60aaa921d35a33727b53fe'
 dataset_id = 'f16774ea29f024a306c7fc7a'
 dataset_id = '9568f663d566aabb62a8e98e'
 
@@ -260,6 +262,7 @@ station_ids = '71369f685f7a5841a060a171'
 dataset_id = '0b2bd62cc42f3096136f11e9'
 station_ids = 'c8db6013a9eb76705b5c80f2'
 ref = 'ashley'
+station_ids = '7eb2694917a2ece89e86e9b8'
 
 dataset_id = 'b3d852cd72ac043c701493c4'
 
@@ -281,6 +284,8 @@ dataset_id = 'd3e5979d76fcebc9f6aec383'
 version_date = '2022-09-04T19:00:00'
 
 dataset_id = '469b6a9ef620bce70fab5760'
+dataset_id = '980177538186a9bb9c9a0672'
+dataset_id = '54374801c0311a98a0f8e5ef'
 
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
@@ -290,7 +295,7 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:100]]
+station_ids = [s['station_id'] for s in stns1[:1]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)

@@ -565,7 +565,7 @@ class Tethys(object):
             xr3.attrs['version_date'] = pd.Timestamp(vd).tz_localize(None).isoformat()
 
             if squeeze_dims:
-                xr3 = xr3.squeeze_dims()
+                xr3 = xr3.squeeze()
 
         else:
             xr3 = xr.Dataset()
