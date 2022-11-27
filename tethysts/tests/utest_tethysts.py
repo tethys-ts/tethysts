@@ -215,7 +215,8 @@ heights = None
 bands: int = None
 squeeze_dims: bool = False
 threads: int = 30
-
+output_path = None
+compression='zstd'
 
 remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
@@ -235,6 +236,7 @@ remote = {'bucket': 'tasman-env', 'public_url': 'https://b2.tethys-ts.xyz/file',
 remote = {'bucket': 'noaa-nwm', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'jaxa-data', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'linz-data', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'mdc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 # cache = '/home/mike/cache/tethys'
@@ -287,6 +289,9 @@ dataset_id = '469b6a9ef620bce70fab5760'
 dataset_id = '980177538186a9bb9c9a0672'
 dataset_id = '54374801c0311a98a0f8e5ef'
 
+dataset_id = 'ef79659d4175c6d70d748b5e'
+station_ids = 'b8db7f021cf6e422d6d85881'
+
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
 self = Tethys()
@@ -295,7 +300,7 @@ rv1 = self.get_versions(dataset_id)
 stns1 = self.get_stations(dataset_id)
 stns1 = self.get_stations(dataset_id, version_date=version_date)
 
-station_ids = [s['station_id'] for s in stns1[:1]]
+station_ids = [s['station_id'] for s in stns1[:2]]
 station_ids = [s['station_id'] for s in stns1 if ref in s['ref']]
 
 results1 = self.get_results(dataset_id, station_ids, heights=None)
@@ -309,6 +314,9 @@ results1 = self.get_results(dataset_id, station_ids, heights=[10], output_path='
 results1 = self.get_results(dataset_id, station_ids, heights=[10], from_date='2020-04-01')
 
 results1 = self.get_results(dataset_id, station_ids, heights=None, from_date='2015-04-01')
+
+results1 = self.get_results(dataset_id, station_ids, heights=None, from_mod_date='2022-10-01')
+results1 = self.get_results(dataset_id, station_ids, heights=None, to_mod_date='2022-10-01')
 
 
 for d in self.datasets:
@@ -371,7 +379,7 @@ for ds_id in ds_ids:
 
 
 
-
+stn_ids = {s['station_id']: pd.Timestamp(s['time_range']['to_date']) - pd.Timestamp(s['time_range']['from_date']) for s in stns1}
 
 
 

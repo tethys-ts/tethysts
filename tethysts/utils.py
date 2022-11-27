@@ -433,30 +433,45 @@ def read_json_zstd(obj):
 #     return file_obj
 
 
-def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, to_date=None, heights=None, bands=None):
+def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, to_date=None, heights=None, bands=None, from_mod_date=None, to_mod_date=None):
     """
 
     """
     ## Stations filter
     rc2 = copy.deepcopy([rc for rc in results_chunks if rc['station_id'] in stn_ids])
+    first_one = rc2[0]
 
-    ## Temporal filter
-    if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc2[0]):
+    ## Temporal filters
+    if isinstance(from_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in first_one):
         from_date1 = int(pd.Timestamp(from_date).timestamp()/60/60/24)
         rc2 = [rc for rc in rc2 if (rc['chunk_day'] + time_interval) >= from_date1]
 
     if len(rc2) == 0:
         return rc2
 
-    if isinstance(to_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in rc2[0]):
+    if isinstance(to_date, (str, pd.Timestamp, datetime)) and ('chunk_day' in first_one):
         to_date1 = int(pd.Timestamp(to_date).timestamp()/60/60/24)
         rc2 = [rc for rc in rc2 if rc['chunk_day'] <= to_date1]
 
     if len(rc2) == 0:
         return rc2
 
+    if isinstance(from_mod_date, (str, pd.Timestamp, datetime)) and ('modified_date' in first_one):
+        from_mod_date1 = pd.Timestamp(from_mod_date)
+        rc2 = [rc for rc in rc2 if pd.Timestamp(rc['modified_date']) >= from_mod_date1]
+
+    if len(rc2) == 0:
+        return rc2
+
+    if isinstance(to_mod_date, (str, pd.Timestamp, datetime)) and ('modified_date' in first_one):
+        to_mod_date1 = pd.Timestamp(to_mod_date)
+        rc2 = [rc for rc in rc2 if pd.Timestamp(rc['modified_date']) <= to_mod_date1]
+
+    if len(rc2) == 0:
+        return rc2
+
     ## Heights and bands filter
-    if (heights is not None) and ('height' in rc2[0]):
+    if (heights is not None) and ('height' in first_one):
         if isinstance(heights, (int, float)):
             h1 = [int(heights*1000)]
         elif isinstance(heights, list):
@@ -468,7 +483,7 @@ def chunk_filters(results_chunks, stn_ids, time_interval=None, from_date=None, t
     if len(rc2) == 0:
         return rc2
 
-    if (bands is not None) and ('band' in rc2[0]):
+    if (bands is not None) and ('band' in first_one):
         if isinstance(bands, int):
             b1 = [heights]
         elif isinstance(bands, list):
@@ -841,7 +856,7 @@ def xr_concat(datasets: List[xr.Dataset]):
     return xr3
 
 
-def results_concat(results_list, output_path=None, from_date=None, to_date=None, compression='lzf'):
+def results_concat(results_list, output_path=None, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, compression='lzf'):
     """
 
     """
@@ -854,6 +869,19 @@ def results_concat(results_list, output_path=None, from_date=None, to_date=None,
     h1.to_hdf5(output_path, compression=compression)
 
     xr3 = xr.open_dataset(output_path, engine='h5netcdf', cache=False)
+
+    ## Deal with mod dates filters
+    if ((from_mod_date is not None) or (to_mod_date is not None)) and ('modified_date' in xr3):
+        mod_dates = xr3['modified_date'].copy().load()
+
+        if (from_mod_date is not None) and (to_mod_date is not None):
+            mod_bool = (mod_dates >= pd.Timestamp(from_mod_date)) & (mod_dates <= pd.Timestamp(to_mod_date))
+        elif (from_mod_date is not None):
+            mod_bool = (mod_dates >= pd.Timestamp(from_mod_date))
+        elif (to_mod_date is not None):
+            mod_bool = (mod_dates <= pd.Timestamp(to_mod_date))
+
+        xr3 = xr3.where(mod_bool, drop=True)
 
     return xr3
 
