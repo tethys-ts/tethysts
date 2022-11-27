@@ -1,4 +1,5 @@
 from tethysts import Tethys
+import xarray as xr
 import yaml
 import pandas as pd
 import os
@@ -214,7 +215,8 @@ heights = None
 bands: int = None
 squeeze_dims: bool = False
 threads: int = 30
-
+output_path = None
+compression='zstd'
 
 remote = {'bucket': 'nz-open-modelling-consortium', 'public_url': 'https://b2.nzrivers.xyz/file/', 'version': 4}
 remote = {'bucket': 'fire-emergency-nz', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}
@@ -232,13 +234,16 @@ remote = {'bucket': 'met-service', 'public_url': 'https://b2.nzrivers.xyz/file/'
 remote = {'bucket': 'met-solutions', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'tasman-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 remote = {'bucket': 'noaa-nwm', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'jaxa-data', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'linz-data', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
+remote = {'bucket': 'mdc-env', 'public_url': 'https://b2.tethys-ts.xyz/file', 'version': 4}
 
 cache = '/media/nvme1/cache/tethys'
 # cache = '/home/mike/cache/tethys'
 
 dataset_id = '7751c5f1bf47867fb109d7eb'
 dataset_id = '0b2bd62cc42f3096136f11e9'
-# dataset_id = '0de7cbfe05aebc2272ceba17'
+dataset_id = 'fb60aaa921d35a33727b53fe'
 dataset_id = 'f16774ea29f024a306c7fc7a'
 dataset_id = '9568f663d566aabb62a8e98e'
 
@@ -259,6 +264,7 @@ station_ids = '71369f685f7a5841a060a171'
 dataset_id = '0b2bd62cc42f3096136f11e9'
 station_ids = 'c8db6013a9eb76705b5c80f2'
 ref = 'ashley'
+station_ids = '7eb2694917a2ece89e86e9b8'
 
 dataset_id = 'b3d852cd72ac043c701493c4'
 
@@ -280,6 +286,11 @@ dataset_id = 'd3e5979d76fcebc9f6aec383'
 version_date = '2022-09-04T19:00:00'
 
 dataset_id = '469b6a9ef620bce70fab5760'
+dataset_id = '980177538186a9bb9c9a0672'
+dataset_id = '54374801c0311a98a0f8e5ef'
+
+dataset_id = 'ef79659d4175c6d70d748b5e'
+station_ids = 'b8db7f021cf6e422d6d85881'
 
 self = Tethys([remote], cache=cache)
 self = Tethys([remote])
@@ -303,6 +314,9 @@ results1 = self.get_results(dataset_id, station_ids, heights=[10], output_path='
 results1 = self.get_results(dataset_id, station_ids, heights=[10], from_date='2020-04-01')
 
 results1 = self.get_results(dataset_id, station_ids, heights=None, from_date='2015-04-01')
+
+results1 = self.get_results(dataset_id, station_ids, heights=None, from_mod_date='2022-10-01')
+results1 = self.get_results(dataset_id, station_ids, heights=None, to_mod_date='2022-10-01')
 
 
 for d in self.datasets:
@@ -365,7 +379,7 @@ for ds_id in ds_ids:
 
 
 
-
+stn_ids = {s['station_id']: pd.Timestamp(s['time_range']['to_date']) - pd.Timestamp(s['time_range']['from_date']) for s in stns1}
 
 
 

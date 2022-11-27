@@ -521,7 +521,7 @@ class Tethys(object):
         ## Get results chunks
         rc_list = self._get_results_chunks(dataset_id, vd)
 
-        chunks = utils.chunk_filters(rc_list, stn_ids, time_interval, from_date, to_date, heights, bands)
+        chunks = utils.chunk_filters(rc_list, stn_ids, time_interval, from_date, to_date, heights, bands, from_mod_date, to_mod_date)
 
         if chunks:
 
@@ -550,7 +550,7 @@ class Tethys(object):
             xr.backends.file_manager.FILE_CACHE.clear()
 
             ## combine results
-            xr3 = utils.results_concat(results_list, output_path=output_path, from_date=from_date, to_date=to_date, compression=compression)
+            xr3 = utils.results_concat(results_list, output_path=output_path, from_date=from_date, to_date=to_date, from_mod_date=from_mod_date, to_mod_date=to_mod_date, compression=compression)
 
             ## Convert to new version
             attrs = xr3.attrs.copy()
@@ -565,7 +565,7 @@ class Tethys(object):
             xr3.attrs['version_date'] = pd.Timestamp(vd).tz_localize(None).isoformat()
 
             if squeeze_dims:
-                xr3 = xr3.squeeze_dims()
+                xr3 = xr3.squeeze()
 
         else:
             xr3 = xr.Dataset()
