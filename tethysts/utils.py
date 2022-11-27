@@ -856,6 +856,29 @@ def xr_concat(datasets: List[xr.Dataset]):
     return xr3
 
 
+def filter_mod_dates(results, from_mod_date=None, to_mod_date=None):
+    """
+    Need to do this because xarray "where" is useless...
+    """
+    if ((from_mod_date is not None) or (to_mod_date is not None)) and ('modified_date' in results):
+        mod_dates = results['modified_date'].copy().load()
+
+        if (from_mod_date is not None) and (to_mod_date is not None):
+            mod_bool = (mod_dates >= pd.Timestamp(from_mod_date)) & (mod_dates <= pd.Timestamp(to_mod_date))
+        elif (from_mod_date is not None):
+            mod_bool = (mod_dates >= pd.Timestamp(from_mod_date))
+        elif (to_mod_date is not None):
+            mod_bool = (mod_dates <= pd.Timestamp(to_mod_date))
+
+        data_vars1 = [var for var in results.data_vars if 'time' in results[var].dims]
+
+        results[data_vars1] = results[data_vars1].where(mod_bool)
+
+        return results.dropna('time', how='all')
+    else:
+        return results
+
+
 def results_concat(results_list, output_path=None, from_date=None, to_date=None, from_mod_date=None, to_mod_date=None, compression='lzf'):
     """
 
@@ -872,16 +895,7 @@ def results_concat(results_list, output_path=None, from_date=None, to_date=None,
 
     ## Deal with mod dates filters
     if ((from_mod_date is not None) or (to_mod_date is not None)) and ('modified_date' in xr3):
-        mod_dates = xr3['modified_date'].copy().load()
-
-        if (from_mod_date is not None) and (to_mod_date is not None):
-            mod_bool = (mod_dates >= pd.Timestamp(from_mod_date)) & (mod_dates <= pd.Timestamp(to_mod_date))
-        elif (from_mod_date is not None):
-            mod_bool = (mod_dates >= pd.Timestamp(from_mod_date))
-        elif (to_mod_date is not None):
-            mod_bool = (mod_dates <= pd.Timestamp(to_mod_date))
-
-        xr3 = xr3.where(mod_bool, drop=True)
+        xr3 = filter_mod_dates(xr3, from_mod_date, to_mod_date)
 
     return xr3
 
