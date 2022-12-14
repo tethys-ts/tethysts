@@ -840,6 +840,11 @@ def xr_concat(datasets: List[xr.Dataset]):
         xr3[var].attrs = var_dict['attrs']
         xr3[var].encoding = var_dict['enc']
 
+    # Update the attributes in the coords from the first ds
+    for coord in xr3.coords:
+        xr3[coord].encoding = datasets[0][coord].encoding
+        xr3[coord].attrs = datasets[0][coord].attrs
+
     # Fill the dataset with data
     for chunk in datasets:
         for var in chunk.data_vars:
