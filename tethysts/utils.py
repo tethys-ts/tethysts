@@ -153,12 +153,10 @@ def get_nearest_station(stns, geom_query):
 
     geom1 = [shape(s['geometry']) for i, s in stns.items()]
     strtree = STRtree(geom1)
-    res = strtree.nearest(geom_query)
-    res_id = res.wkb_hex
+    res_index = strtree.nearest(geom_query)
 
-    stn_id_dict = {shape(s['geometry']).wkb_hex: i for i, s in stns.items()}
-
-    stn_id = stn_id_dict[res_id]
+    stn_ids_list = list(stns.keys())
+    stn_id = stn_ids_list[res_index]
 
     return stn_id
 
