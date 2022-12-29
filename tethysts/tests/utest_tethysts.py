@@ -13,6 +13,7 @@ import orjson
 import tethys_utils as tu
 import numpy as np
 
+
 pd.options.display.max_columns = 10
 
 ##############################################
@@ -559,17 +560,6 @@ my_station = [s for s in stations if (s['name'] == "Waimakariri at Arthur's Pass
 my_station = ts.get_stations(dataset_id, geometry=geometry)
 my_stations = ts.get_stations(dataset_id, lat=lat, lon=lon, distance=distance)
 results = ts.get_results(dataset_id, station_id, output='xarray')
-
-
-
-
-
-
-
-
-
-
-
 
 
 
