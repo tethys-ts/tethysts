@@ -5,10 +5,12 @@ Background
 -----------
 This section describes how to use the tethysts package. The functions depend heavily on the `xarray package <http://xarray.pydata.org/>`_. Nearly all outputs are either as xarray Datasets or python lists of dictionaries.
 
-The datasets are organised in three layers:
+The datasets are organised in three main layers:
   - Dataset metadata
   - Stations
   - Results
+
+There is also versioning of the Stations and Results. Dataset metadata is not currently versioned.
 
 Dataset metadata
 ----------------
@@ -36,7 +38,7 @@ Import the Tethys class:
 
 Public datasets
 ~~~~~~~~~~~~~~~
-Initialising the Tethys class without any parameters will pull down all public remotes and parse the associated dataset metadata. The datasets object is a list of dictionaries with a lot of metadata about each dataset. It should tell you practically all you need to know about data contained in the results (e.g. parameter, units, data licence, owner, etc). Use normal python list comprehension to select the dataset(s) of interest:
+Initialising the Tethys class without any parameters will pull down all public remotes and parse the associated dataset metadata. The datasets object is a list of dictionaries with a lot of metadata about each dataset. It should tell you practically all you need to know about the data contained in the results (e.g. parameter, units, data licence, owner, etc). Use normal python list comprehension to select the dataset(s) of interest:
 
 
 .. ipython:: python
@@ -52,7 +54,7 @@ Initialising the Tethys class without any parameters will pull down all public r
 
 Private datasets
 ~~~~~~~~~~~~~~~~
-Some datasets are not available through the public repository. Accessing private datasets stored in S3 buckets requires remote connection configuration data. A remote configuration requires a list of dictionaries of bucket name, connection_config/public_url, and version as shown in the following example:
+Some datasets are not available through the public repository. Accessing private datasets stored in S3 buckets requires remote connection configuration data. A remote configuration requires a list of dictionaries of bucket name, connection_config/public_url, and system version as shown in the following example:
 
 
 .. code:: python
@@ -132,7 +134,7 @@ To get a bunch of stations within a specified area, you can pass a polygon GeoJS
 
 Results
 -------
-But what you'll need next is to pick a station and write down the station_id just like you did with the dataset_id.
+What you'll need next is to pick a station and write down the station_id just like you did with the dataset_id.
 
 To get the results (the 4D data), you'll need a dataset_id and station_id. Internally, the results are broken up by dataset and station.
 The get_results method has many input options. Take a look at the reference page for a description of all the options.
@@ -144,7 +146,7 @@ The get_results method has many input options. Take a look at the reference page
   results = ts.get_results(dataset_id, station_id)
   results
 
-Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the dataset metadata. If the results represent geospatially sparse data, then the results are indexed by geometry, height, and time. If the results represent gridded data, then the results are indexed by lat, lon, height, and time. The geometry dimension is a hexadecimal encoded Well-Known Binary (WKB) representation of the geometry. This was used to be flexible on the geometry type (i.e. points, lines, or polygons) and the WKB ensures that the geometry is stored accurately. This is a standard format by the Open Geospatial Consortium (OGC) and can be parsed by many programs including shapely, PostGIS, etc. Using WKB in a geometry dimension does not follow CF conventions. This was a trade off between flexibility, simplicity, and following standards. I picked flexibility and simplicity.
+Unlike the previously returned objects, the results object (in this case) is an xarray Dataset. This xarray Dataset contains both the results (temperature) and all of the dataset metadata. If the results represent geospatially sparse data, then the results are indexed by geometry, height, and time. If the results represent gridded data, then the results are indexed by lat, lon, height, and time. The geometry dimension is a hexadecimal encoded Well-Known Binary (WKB) representation of the geometry. This was used to be flexible on the geometry type (i.e. points, lines, or polygons) and the WKB ensures that the geometry is stored accurately. This is a standard format by the Open Geospatial Consortium (OGC) and can be parsed by many programs including shapely, PostGIS, etc. Using WKB in a geometry dimension does not follow CF conventions, however. This was a trade off between flexibility, simplicity, and following standards. I leaned towards flexibility and simplicity on this one.
 
 In addition to the get_stations spatial queries, the get_results method has a built-in nearest neighbour query if you omit the station_id and pass either geometry dict or a combination of latitude and longitude. This is especially useful for gridded results when each station represents a large area rather than a single point.
 
@@ -156,7 +158,7 @@ In addition to the get_stations spatial queries, the get_results method has a bu
   results = ts.get_results(dataset_id, geometry=geometry, squeeze_dims=True)
   results
 
-If you want to get more than one station per dataset, then you can still use the get_results. The output will concatenate the xarray Datasets together and return a single xarray Dataset.
+If you want to get more than one station per dataset, then you can still use the get_results. The output will concatenate the xarray Datasets together and return a single xarray Dataset. Since the get_results method is multithreaded when downloading results, passing multiple station ids to it will be much faster than using a "for loop" over each station id.
 
 .. ipython:: python
 
@@ -168,19 +170,18 @@ If you want to get more than one station per dataset, then you can still use the
 
 Saving to hdf5 files
 ~~~~~~~~~~~~~~~~~~~~
-Starting in version 4.5, Tethys can now save results directly to hdf5 files that can be opened by xarray. You must specify an output_path and optionally a compression for the hdf5 file (gzip is the default compression). There's no consern for excessive data volume in this process. You can download results from one station or all stations in a dataset to a single file without much trouble. It's recommended to save the file with the .h5 extension rather than the .nc extension to make it clear that it's a normal hdf5 file rather than a fully netcdf4-compliant file. Future versions might be formatted to be fully netcdf4-compliant...if I can figure out all of the nuances...any help is appreciated!
+Starting in version 4.5, Tethys can now save results directly to hdf5 files that can be opened by xarray. You must specify an output_path and optionally a compression for the hdf5 file (lzf is the default compression). There's no concern for excessive data volume in this process. You can download results from one station or all stations in a dataset to a single file without much trouble. It's recommended to save the file with the .h5 extension rather than the .nc extension to make it clear that it's a normal hdf5 file rather than a fully netcdf4-compliant file. Future versions might be formatted to be fully netcdf4-compliant...if I can figure out all of the nuances...any help is appreciated! *Update using hdf5tools>=0.1.12*...I've managed to make the hdf5 file compatible with the python netcdf4 package. This means that files created by the tethysts package should be compatible with any python packages that read netcdf4 data (which of course includes xarray).
 
 .. code:: python
 
     results = ts.get_results(dataset_id, station_ids, output_path='/my/local/path/results.h5', compression='lzf')
 
 
-And if you'd like to reopen the hdf5 file with xarray later, then you need to set engine='h5netcdf' in the xr.open_dataset function.
+And if you'd like to reopen the hdf5 file with xarray later, then you can use the xr.open_dataset function as normal (even with advanced compression...somehow...).
 
 .. code:: python
 
-    results = xr.open_dataset('/my/local/path/results.h5', engine='h5netcdf')
-
+    results = xr.open_dataset('/my/local/path/results.h5')
 
 
 Selective filters

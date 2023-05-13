@@ -42,9 +42,9 @@ requirements:
     - scipy
     - orjson
     - requests
-    - shapely
+    - shapely >=2
     - tethys-data-models >=0.4.11
-    - hdf5tools >=0.1.10
+    - hdf5tools >=0.1.12
     - s3tethys >=0.0.4
 
 test:
