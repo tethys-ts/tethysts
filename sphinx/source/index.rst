@@ -4,7 +4,7 @@ This Python package contains a class for reading geospatial time series data sto
 
 This documentation and the tethysts package are currently under active development. Most of the fundamental aspects of the API are well established, but minor tweaks and new functionality are constantly being made.
 
-The package dependencies are: zstandard, pandas, xarray, scipy, boto3, orjson, requests, and shapely.
+The package dependencies are: zstandard, pandas, xarray, scipy, boto3, orjson, requests, shapely, tethys-data-models, s3tethys, and hdf5tools.
 
 The GitHub repository is found `here <https://github.com/tethys-ts/tethysts>`_.
 Go to the `Tethys Dataset Discovery <https://wai.tethys-ts.xyz/>`_ dashboard to easily see what datasets are available.

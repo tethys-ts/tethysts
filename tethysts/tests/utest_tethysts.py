@@ -13,6 +13,7 @@ import orjson
 import tethys_utils as tu
 import numpy as np
 
+
 pd.options.display.max_columns = 10
 
 ##############################################
@@ -563,14 +564,11 @@ results = ts.get_results(dataset_id, station_id, output='xarray')
 
 
 
+# db = booklet.open('/media/nvme1/data/OLW/web_app/output/catch_lc.blt')
 
+# keys = list(db.keys())
 
-
-
-
-
-
-
+# db[9259625]
 
 
 

@@ -153,12 +153,10 @@ def get_nearest_station(stns, geom_query):
 
     geom1 = [shape(s['geometry']) for i, s in stns.items()]
     strtree = STRtree(geom1)
-    res = strtree.nearest(geom_query)
-    res_id = res.wkb_hex
+    res_index = strtree.nearest(geom_query)
 
-    stn_id_dict = {shape(s['geometry']).wkb_hex: i for i, s in stns.items()}
-
-    stn_id = stn_id_dict[res_id]
+    stn_ids_list = list(stns.keys())
+    stn_id = stn_ids_list[res_index]
 
     return stn_id
 
@@ -170,14 +168,18 @@ def get_intersected_stations(stns, geom_query):
     if isinstance(geom_query, dict):
         geom_query = shape(geom_query)
 
+    stn_ids_list = list(stns.keys())
     geom1 = [shape(s['geometry']) for i, s in stns.items()]
     strtree = STRtree(geom1)
-    res = strtree.query(geom_query)
-    res_ids = [r.wkb_hex for r in res]
+    res_index = strtree.query(geom_query)
 
-    stn_id_dict = {shape(s['geometry']).wkb_hex: i for i, s in stns.items()}
+    stn_ids = [stn_ids_list[r] for r in res_index]
 
-    stn_ids = [stn_id_dict[r] for r in res_ids]
+    # res_ids = [r.wkb_hex for r in res]
+
+    # stn_id_dict = {shape(s['geometry']).wkb_hex: i for i, s in stns.items()}
+
+    # stn_ids = [stn_id_dict[r] for r in res_ids]
 
     return stn_ids
 
