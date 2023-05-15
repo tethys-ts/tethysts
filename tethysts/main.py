@@ -57,7 +57,7 @@ class Tethys(object):
     tethys object
     """
     ## Initial import and assignment function
-    def __init__(self, remotes: List[tdm.base.Remote] = None, cache: Union[pathlib.Path] = None):
+    def __init__(self, remotes: List[tdm.base.Remote] = None, cache: Union[pathlib.Path, str] = None):
         """
         The cache parameter might eventually include pymongo.database.Database.
 
@@ -74,10 +74,8 @@ class Tethys(object):
                 The base public Http URL to download data from S3.
             version: int
                 The system version number.
-        cache : str path or None
-            If the input is a str path, then data will be cached locally. None will perform no caching.
-
-
+        cache : str, pathlib.Path, or None
+            If the input is a path, then data will be cached locally. None will perform no caching.
         """
         setattr(self, 'datasets', [])
         setattr(self, '_datasets', {})
@@ -88,7 +86,7 @@ class Tethys(object):
         setattr(self, '_versions', {})
         setattr(self, '_results_chunks', {})
 
-        if isinstance(cache, str):
+        if isinstance(cache, (str, pathlib.Path)):
             cache_path = pathlib.Path(cache)
             os.makedirs(cache_path, exist_ok=True)
             setattr(self, 'cache', cache_path)
