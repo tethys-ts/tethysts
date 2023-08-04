@@ -10,4 +10,4 @@ hdf5tools>=0.1.14
 s3tethys>=0.0.8
 pydantic==1.10
 h5netcdf>=1.1.0
-typing-extensions=4.6
+typing-extensions==4.6
