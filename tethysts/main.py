@@ -9,10 +9,8 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 import orjson
-# import yaml
 from datetime import datetime
 import copy
-# from multiprocessing.pool import ThreadPool
 import concurrent.futures
 from tethysts import utils
 # import utils
@@ -20,9 +18,6 @@ from s3tethys import get_object_s3, s3_client, decompress_stream_to_object
 from typing import List, Union
 import tethys_data_models as tdm
 import pathlib
-from time import time
-# import pymongo
-# pymongo.database.Database
 
 # pd.options.display.max_columns = 10
 

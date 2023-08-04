@@ -3,36 +3,24 @@
 
 """
 import io
-import os
 import numpy as np
-# import requests
 import xarray as xr
 import pandas as pd
 import orjson
 from datetime import datetime
 import zstandard as zstd
-import pickle
 import copy
-# import boto3
 import botocore
-from time import sleep
 from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
 from scipy import spatial
-# import tethys_data_models as tdm
 import pathlib
-# from functools import partial
 from pydantic import HttpUrl
-# import shutil
-# import gzip
 from hdf5tools import H5
 import s3tethys
-# import smart_open
-# import psutil
-from pprint import pprint
 
-pd.options.display.max_columns = 10
+# pd.options.display.max_columns = 10
 
 ##############################################
 ### Reference objects

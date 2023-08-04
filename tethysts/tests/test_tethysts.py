@@ -7,11 +7,11 @@ import os
 import pathlib
 import shutil
 from tethysts import Tethys
-import pandas as pd
-import os
+# import pandas as pd
+# import os
 import pytest
 
-pd.options.display.max_columns = 10
+# pd.options.display.max_columns = 10
 
 ##############################################
 ### Parameters
