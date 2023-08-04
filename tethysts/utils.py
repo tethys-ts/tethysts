@@ -246,37 +246,37 @@ def get_nearest_from_extent(data,
     return data1
 
 
-def read_pkl_zstd(obj, unpickle=False):
-    """
-    Deserializer from a pickled object compressed with zstandard.
+# def read_pkl_zstd(obj, unpickle=False):
+#     """
+#     Deserializer from a pickled object compressed with zstandard.
 
-    Parameters
-    ----------
-    obj : bytes or str
-        Either a bytes object that has been pickled and compressed or a str path to the file object.
-    unpickle : bool
-        Should the bytes object be unpickled or left as bytes?
+#     Parameters
+#     ----------
+#     obj : bytes or str
+#         Either a bytes object that has been pickled and compressed or a str path to the file object.
+#     unpickle : bool
+#         Should the bytes object be unpickled or left as bytes?
 
-    Returns
-    -------
-    Python object
-    """
-    if isinstance(obj, str):
-        with open(obj, 'rb') as p:
-            dctx = zstd.ZstdDecompressor()
-            with dctx.stream_reader(p) as reader:
-                obj1 = reader.read()
+#     Returns
+#     -------
+#     Python object
+#     """
+#     if isinstance(obj, str):
+#         with open(obj, 'rb') as p:
+#             dctx = zstd.ZstdDecompressor()
+#             with dctx.stream_reader(p) as reader:
+#                 obj1 = reader.read()
 
-    elif isinstance(obj, bytes):
-        dctx = zstd.ZstdDecompressor()
-        obj1 = dctx.decompress(obj)
-    else:
-        raise TypeError('obj must either be a str path or a bytes object')
+#     elif isinstance(obj, bytes):
+#         dctx = zstd.ZstdDecompressor()
+#         obj1 = dctx.decompress(obj)
+#     else:
+#         raise TypeError('obj must either be a str path or a bytes object')
 
-    if unpickle:
-        obj1 = pickle.loads(obj1)
+#     if unpickle:
+#         obj1 = pickle.loads(obj1)
 
-    return obj1
+#     return obj1
 
 
 def read_json_zstd(obj):
