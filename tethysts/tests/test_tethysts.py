@@ -7,11 +7,11 @@ import os
 import pathlib
 import shutil
 from tethysts import Tethys
-import pandas as pd
-import os
+# import pandas as pd
+# import os
 import pytest
 
-pd.options.display.max_columns = 10
+# pd.options.display.max_columns = 10
 
 ##############################################
 ### Parameters
@@ -229,10 +229,7 @@ def test_get_nearest_results2():
     assert len(s2) > 0
 
 
+def test_get_intersection_results1():
+    s3 = t1.get_results(dataset_id, lat=lat, lon=lon, distance=distance, heights=[10])
 
-
-
-# def test_get_intersection_results1():
-#     s3 = t1.get_results(dataset_id, lat=lat, lon=lon, distance=distance)
-#
-#     assert len(s3) > 1
+    assert len(s3) > 0

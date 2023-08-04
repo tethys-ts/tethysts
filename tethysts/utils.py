@@ -3,36 +3,24 @@
 
 """
 import io
-import os
 import numpy as np
-# import requests
 import xarray as xr
 import pandas as pd
 import orjson
 from datetime import datetime
 import zstandard as zstd
-import pickle
 import copy
-# import boto3
 import botocore
-from time import sleep
 from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
 from typing import Optional, List, Any, Union
 from scipy import spatial
-# import tethys_data_models as tdm
 import pathlib
-# from functools import partial
 from pydantic import HttpUrl
-# import shutil
-# import gzip
 from hdf5tools import H5
 import s3tethys
-# import smart_open
-# import psutil
-from pprint import pprint
 
-pd.options.display.max_columns = 10
+# pd.options.display.max_columns = 10
 
 ##############################################
 ### Reference objects
@@ -246,37 +234,37 @@ def get_nearest_from_extent(data,
     return data1
 
 
-def read_pkl_zstd(obj, unpickle=False):
-    """
-    Deserializer from a pickled object compressed with zstandard.
+# def read_pkl_zstd(obj, unpickle=False):
+#     """
+#     Deserializer from a pickled object compressed with zstandard.
 
-    Parameters
-    ----------
-    obj : bytes or str
-        Either a bytes object that has been pickled and compressed or a str path to the file object.
-    unpickle : bool
-        Should the bytes object be unpickled or left as bytes?
+#     Parameters
+#     ----------
+#     obj : bytes or str
+#         Either a bytes object that has been pickled and compressed or a str path to the file object.
+#     unpickle : bool
+#         Should the bytes object be unpickled or left as bytes?
 
-    Returns
-    -------
-    Python object
-    """
-    if isinstance(obj, str):
-        with open(obj, 'rb') as p:
-            dctx = zstd.ZstdDecompressor()
-            with dctx.stream_reader(p) as reader:
-                obj1 = reader.read()
+#     Returns
+#     -------
+#     Python object
+#     """
+#     if isinstance(obj, str):
+#         with open(obj, 'rb') as p:
+#             dctx = zstd.ZstdDecompressor()
+#             with dctx.stream_reader(p) as reader:
+#                 obj1 = reader.read()
 
-    elif isinstance(obj, bytes):
-        dctx = zstd.ZstdDecompressor()
-        obj1 = dctx.decompress(obj)
-    else:
-        raise TypeError('obj must either be a str path or a bytes object')
+#     elif isinstance(obj, bytes):
+#         dctx = zstd.ZstdDecompressor()
+#         obj1 = dctx.decompress(obj)
+#     else:
+#         raise TypeError('obj must either be a str path or a bytes object')
 
-    if unpickle:
-        obj1 = pickle.loads(obj1)
+#     if unpickle:
+#         obj1 = pickle.loads(obj1)
 
-    return obj1
+#     return obj1
 
 
 def read_json_zstd(obj):
