@@ -448,7 +448,7 @@ class Tethys(object):
         lon : float or None
             See lat description.
         distance : float or None
-            See lat description.
+            See lat description. This should be in decimal degrees not meters.
         from_date : str, Timestamp, datetime, or None
             The start date of the selection.
         to_date : str, Timestamp, datetime, or None
