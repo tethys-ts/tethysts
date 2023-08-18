@@ -1,5 +1,5 @@
 {% set name = "tethysts" %}
-{% set version = "4.5.13" %}
+{% set version = "4.5.14" %}
 # {% set sha256 = "ae2cc83fb5a75e8dc3e1b2c2137deea412c8a4c7c9acca52bf4ec59de52a80c9" %}
 
 # sha256 is the prefered checksum -- you can get it for a file with:
@@ -38,7 +38,7 @@ requirements:
     - python >=3.8
     - pandas<2
     - tethys-data-models=0.4.11
-    - hdf5tools>=0.1.14
+    - hdf5tools>=0.2.3
     - s3tethys>=0.0.8
     - xarray>=2022.6.0
     - pydantic=1.10

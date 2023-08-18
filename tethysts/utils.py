@@ -9,6 +9,7 @@ import orjson
 from datetime import datetime
 import zstandard as zstd
 import copy
+import pickle
 import botocore
 from shapely.geometry import shape, Polygon, Point
 from shapely.strtree import STRtree
@@ -34,6 +35,39 @@ s3_url_base = 's3://{bucket}/{key}'
 
 ##############################################
 ### Helper functions
+
+
+def read_pkl_zstd(obj, unpickle=False):
+    """
+    Deserializer from a pickled object compressed with zstandard.
+
+    Parameters
+    ----------
+    obj : bytes or str
+        Either a bytes object that has been pickled and compressed or a str path to the file object.
+    unpickle : bool
+        Should the bytes object be unpickled or left as bytes?
+
+    Returns
+    -------
+    Python object
+    """
+    if isinstance(obj, str):
+        with open(obj, 'rb') as p:
+            dctx = zstd.ZstdDecompressor()
+            with dctx.stream_reader(p) as reader:
+                obj1 = reader.read()
+
+    elif isinstance(obj, bytes):
+        dctx = zstd.ZstdDecompressor()
+        obj1 = dctx.decompress(obj)
+    else:
+        raise TypeError('obj must either be a str path or a bytes object')
+
+    if unpickle:
+        obj1 = pickle.loads(obj1)
+
+    return obj1
 
 
 def update_nested(in_dict, ds_id, version_date, value):
