@@ -1,0 +1,24 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  Tethys: A Python package for accessing geospatial time
+  series data
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Michael
+    family-names: Kittridge
+    email: mullenkamp1@gmail.com
+    orcid: 'https://orcid.org/0009-0000-1732-9097'
+repository-code: 'https://github.com/tethys-ts/tethysts'
+abstract: >-
+  This Python package provides access to publicly accessible
+  geospatial time series data. This includes observations
+  and modelled data both real-time and archived.
+license: Apache-2.0
+version: 4.5.15
+date-released: '2023-08-19'
