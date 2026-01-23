@@ -1,7 +1,7 @@
 pandas==1.5.2
-tethysts==4.5.11
+tethysts==4.5.16
 tethys-data-models==0.4.11
-hdf5tools==0.1.12
+hdf5tools==0.2.4
 numpydoc
 ipython
 matplotlib
