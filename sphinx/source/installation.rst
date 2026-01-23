@@ -2,11 +2,11 @@ Installation
 ============
 Install via pip::
 
-  pip install tethysts==4.5
+  pip install tethysts==4.5.16 hdf5tools==0.2.4
 
 Or conda::
 
-  conda install -c mullenkamp tethysts=4.5
+  conda install -c mullenkamp tethysts=4.5.16 hdf5tools==0.2.4
 
 Requirements
 ------------
