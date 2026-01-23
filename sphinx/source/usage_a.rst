@@ -123,7 +123,7 @@ To get a bunch of stations within a specified area, you can pass a polygon GeoJS
 .. ipython:: python
   :okwarning:
 
-  dataset_id = 'b5d84aa773de2a747079c127'
+  dataset_id = 'c3a09c8a5da175897916e8e8'
   lon = 172.0
   lat = -42.8
   distance = 0.2
@@ -207,7 +207,7 @@ For example if you've made a get_stations request and returned GeoJSON geometrie
 
   from shapely.geometry import shape
 
-  dataset_id = 'b5d84aa773de2a747079c127'
+  dataset_id = 'c3a09c8a5da175897916e8e8'
 
   stations = ts.get_stations(dataset_id)
   stns_geo = {s['station_id']: shape(s['geometry']) for s in stations}
