@@ -5,3 +5,4 @@ hdf5tools==0.2.4
 numpydoc
 ipython
 matplotlib
+sphinx_rtd_theme
