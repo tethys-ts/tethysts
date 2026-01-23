@@ -28,7 +28,7 @@ Import the Tethys class:
    warnings.filterwarnings("ignore")
 
    remotes = [{'bucket': 'ecan-env-monitoring', 'public_url': 'https://b2.tethys-ts.xyz/file/', 'version': 4}]
-   dataset_id = 'b5d84aa773de2a747079c127'
+   dataset_id = 'c3a09c8a5da175897916e8e8'
    station_id = 'f9c61373e7ca386c1fab06db'
 
 .. code:: python
@@ -45,10 +45,10 @@ Initialising the Tethys class without any parameters will pull down all public r
 
   ts = Tethys()
   datasets = ts.datasets
-  my_dataset = [d for d in datasets if (d['parameter'] == 'precipitation') and
-                                       (d['product_code'] == 'raw_data') and
-                                       (d['frequency_interval'] == '24H') and
-                                       (d['owner'] == 'Environment Canterbury')][0]
+  my_dataset = [ds for ds in datasets if (ds['parameter'] == 'precipitation') and
+                                       (ds['product_code'] == 'raw_data') and
+                                       (ds['frequency_interval'] == '1H') and
+                                       (ds['owner'] == 'Environment Canterbury')][0]
   my_dataset
 
 
@@ -70,10 +70,10 @@ Initialise the class with the remotes to get the metadata about the available da
 
   ts = Tethys(remotes)
   datasets = ts.datasets
-  my_dataset = [d for d in datasets if (d['parameter'] == 'precipitation') and
-                                       (d['product_code'] == 'raw_data') and
-                                       (d['frequency_interval'] == '24H') and
-                                       (d['owner'] == 'Environment Canterbury')][0]
+  my_dataset = [ds for ds in datasets if (ds['parameter'] == 'precipitation') and
+                                       (ds['product_code'] == 'raw_data') and
+                                       (ds['frequency_interval'] == '1H') and
+                                       (ds['owner'] == 'Environment Canterbury')][0]
   my_dataset
 
 In this example there is one remote we want to check for datasets, but more dictionaries can be added to the remotes list to parse more datasets.
@@ -97,7 +97,7 @@ Once you've decided which dataset you want (i.e. cumulative 24 hour precipitatio
 
 .. ipython:: python
 
-  dataset_id = 'b5d84aa773de2a747079c127'
+  dataset_id = 'c3a09c8a5da175897916e8e8'
 
   stations = ts.get_stations(dataset_id)
   my_station = [s for s in stations if (s['name'] == "Waimakariri at Arthur's Pass")][0]
@@ -111,7 +111,7 @@ If you've got geographic coordinates as a GeoJSON point or a combination of a la
 .. ipython:: python
   :okwarning:
 
-  dataset_id = 'b5d84aa773de2a747079c127'
+  dataset_id = 'c3a09c8a5da175897916e8e8'
   geometry = {'type': 'Point', 'coordinates': [172.0, -42.8]}
 
   my_station = ts.get_stations(dataset_id, geometry=geometry)
